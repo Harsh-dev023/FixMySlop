@@ -33,18 +33,18 @@
 
 ## Features
 
-- ⚡ Turbo + Deep scan modes for speed vs depth
-- 🔍 Full repository scanning with `.gitignore` awareness
-- 🛡️ Security checks (Bandit + LLM context analysis)
-- 🧹 AI smell detection (hallucinated imports, weak validation, broad exception handling)
-- 📊 Slop Score (0-100) to summarize code health
-- 🔧 LLM-powered fix generation with unified diffs
-- 📄 Report export in Markdown, HTML, JSON, CSV, and PDF
-- 🎨 Polished PyQt5 desktop GUI with dark/light themes
-- 💻 Full CLI for automation and CI-friendly usage
-- 🤖 Auto model fallback when configured model is missing
-- 🪟 Windows-safe terminal output handling
-- 🏠 100% local-first architecture
+-  Turbo + Deep scan modes for speed vs depth
+-  Full repository scanning with `.gitignore` awareness
+-  Security checks (Bandit + LLM context analysis)
+-  AI smell detection (hallucinated imports, weak validation, broad exception handling)
+-  Slop Score (0-100) to summarize code health
+-  LLM-powered fix generation with unified diffs
+-  Report export in Markdown, HTML, JSON, CSV, and PDF
+-  Polished PyQt5 desktop GUI with dark/light themes
+-  Full CLI for automation and CI-friendly usage
+-  Auto model fallback when configured model is missing
+-  Windows-safe terminal output handling
+-  100% local-first architecture
 
 ---
 
