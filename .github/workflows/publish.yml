@@ -35,7 +35,8 @@ jobs:
   publish-npm:
     runs-on: ubuntu-latest
     env:
-      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+      # setup-node injects a placeholder NODE_AUTH_TOKEN, so test the secret itself.
+      HAS_NPM_TOKEN: ${{ secrets.NPM_TOKEN != '' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -43,6 +44,11 @@ jobs:
           node-version: "20"
           registry-url: "https://registry.npmjs.org"
       - name: Publish npm launcher
-        if: env.NODE_AUTH_TOKEN != ''
+        if: env.HAS_NPM_TOKEN == 'true'
         working-directory: npm
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: npm publish --access public
+      - name: Skip (no NPM_TOKEN secret)
+        if: env.HAS_NPM_TOKEN != 'true'
+        run: echo "Add an NPM_TOKEN repository secret to publish the npx launcher."
