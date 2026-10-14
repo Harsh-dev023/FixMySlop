@@ -31,3 +31,31 @@ jobs:
       run: pytest -q
     - name: FixMySlop scans itself
       run: fixmyslop scan . --fail-on medium
+
+  action:
+    # Runs the published GitHub Action (action.yml) the way a user's workflow would.
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+    - uses: actions/checkout@v4
+    - name: Run FixMySlop action on the demo app (must find slop)
+      id: slop
+      uses: ./
+      continue-on-error: true
+      with:
+        path: examples/slop-app
+        fail-on: high
+        upload-sarif: "false"
+    - name: The gate must fail on the sloppy demo
+      if: steps.slop.outcome != 'failure'
+      run: echo "Expected the action to fail on examples/slop-app" && exit 1
+    - name: SARIF was produced
+      run: test -s fixmyslop.sarif && python -c "import json;d=json.load(open('fixmyslop.sarif'));assert d['runs'][0]['results'], 'no results'"
+    - name: Run the action on the clean codebase (must pass)
+      uses: ./
+      with:
+        path: fixmyslop
+        fail-on: medium
+        upload-sarif: "false"
