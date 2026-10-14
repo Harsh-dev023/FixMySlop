@@ -12,7 +12,7 @@ from fixmyslop.core.mcp_server import write_mcp_json
 from fixmyslop.core.skill import install_skill
 from fixmyslop.core.slop.brief import ANTI_SLOP_GUIDE, upsert_guide
 from fixmyslop.core.slop.config import DEFAULT_CONFIG_YAML
-from fixmyslop.macros import PROJECT_CONFIG_FILE
+from fixmyslop.macros import APP_VERSION, PROJECT_CONFIG_FILE
 
 HOOK_COMMAND = "fixmyslop hook"
 HOOK_MATCHER = "Write|Edit|MultiEdit"
@@ -36,7 +36,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: MrSpideyNihal/FixMySlop@main
+      - uses: MrSpideyNihal/FixMySlop@v__VERSION__
         with:
           fail-on: high
           changed-only: ${{ github.event_name == 'pull_request' }}
@@ -44,7 +44,7 @@ jobs:
 
 PRE_COMMIT_ENTRY = """\
   - repo: https://github.com/MrSpideyNihal/FixMySlop
-    rev: v0.3.2
+    rev: v0.3.3
     hooks:
       - id: fixmyslop
 """
@@ -112,7 +112,7 @@ def install_github(root: Path) -> list[str]:
     if path.exists():
         return [".github/workflows/fixmyslop.yml already exists"]
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(GITHUB_WORKFLOW, encoding="utf-8")
+    path.write_text(GITHUB_WORKFLOW.replace("__VERSION__", APP_VERSION), encoding="utf-8")
     return ["created .github/workflows/fixmyslop.yml (PR annotations + fail on HIGH)"]
 
 

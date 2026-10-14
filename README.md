@@ -150,16 +150,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - uses: MrSpideyNihal/FixMySlop@main
+      - uses: MrSpideyNihal/FixMySlop@v0.3.3
         with: { fail-on: high, changed-only: true }
 ```
 
-Findings show up as inline PR annotations (SARIF). pre-commit:
+Findings show up as inline PR annotations (SARIF). Also on the [GitHub Marketplace](https://github.com/marketplace/actions/fixmyslop-ai-slop-linter). pre-commit:
 
 ```yaml
 repos:
   - repo: https://github.com/MrSpideyNihal/FixMySlop
-    rev: v0.3.2
+    rev: v0.3.3
     hooks: [{ id: fixmyslop }]
 ```
 
