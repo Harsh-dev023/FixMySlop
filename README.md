@@ -159,7 +159,7 @@ Findings show up as inline PR annotations (SARIF). pre-commit:
 ```yaml
 repos:
   - repo: https://github.com/MrSpideyNihal/FixMySlop
-    rev: v0.3.1
+    rev: v0.3.2
     hooks: [{ id: fixmyslop }]
 ```
 

@@ -27,3 +27,25 @@ def test_npm_launcher_version_matches():
     from pathlib import Path
     package = json.loads((Path(__file__).parent.parent / "npm" / "package.json").read_text(encoding="utf-8"))
     assert package["version"] == APP_VERSION
+
+
+def test_bracket_paths_and_text_survive_rich_markup(tmp_path):
+    """Next.js routes like app/[slug]/page.tsx and texts like fixmyslop-ignore[rule] must print verbatim."""
+    route = tmp_path / "app" / "[slug]"
+    route.mkdir(parents=True)
+    (route / "page.tsx").write_text('<a href="#">x</a>\n', encoding="utf-8")
+    result = runner.invoke(app, ["scan", str(tmp_path), "--no-static", "--fail-on", "none"])
+    assert "app/[slug]/page.tsx" in result.stdout
+    explained = runner.invoke(app, ["rules", "ui/arbitrary-color"])
+    assert "fixmyslop-ignore[ui/arbitrary-color]" in explained.stdout
+    assert "bg-[#1a1a2e]" in explained.stdout
+
+
+def test_gui_without_pyqt_names_the_extra(monkeypatch):
+    """The install hint must keep the [gui] extra (Rich would otherwise eat it as markup)."""
+    import sys
+    monkeypatch.setitem(sys.modules, "PyQt5", None)
+    monkeypatch.delitem(sys.modules, "fixmyslop.ui.app", raising=False)
+    result = runner.invoke(app, ["gui"])
+    assert result.exit_code == 1
+    assert "pip install fixmyslop[gui]" in result.stdout

@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Optional
 
 import typer
+from rich.markup import escape
 
 from fixmyslop.macros import (
     APP_NAME, APP_VERSION, DEFAULT_MODEL, DEFAULT_BASE_URL, DEFAULT_API_KEY,
@@ -124,7 +125,7 @@ def run_scan(paths: Optional[list[str]], *, changed: bool = False, base: Optiona
     total = len(file_list)
     for index, (file_path, content) in enumerate(scanner.scan(), 1):
         if show_progress and llm_client:
-            console.print(f"  [dim][{index}/{total}][/dim] {engine.relpath(file_path)}")
+            console.print(f"  [dim]\\[{index}/{total}][/dim] {escape(engine.relpath(file_path))}")
         issues.extend(analyzer.analyze_file(file_path, content))
     issues.extend(analyzer.finalize())
     if only:  # --only selects FixMySlop rule groups, so drop third-party tool findings
@@ -620,12 +621,12 @@ def rules(rule_id: Optional[str] = typer.Argument(None, help="Show details for o
         if not found:
             print_error(f"Unknown rule '{rule_id}'. Run `fixmyslop rules` for the list.")
             raise typer.Exit(1)
-        console.print(f"\n[bold]{found.id}[/bold] — {found.title}  [dim]({found.severity}, {found.category})[/dim]\n")
-        console.print(f"[bold]Why:[/bold] {found.why}\n")
-        console.print(f"[bold]Fix:[/bold] {found.fix}\n")
+        console.print(f"\n[bold]{escape(found.id)}[/bold] — {escape(found.title)}  [dim]({found.severity}, {found.category})[/dim]\n")
+        console.print(f"[bold]Why:[/bold] {escape(found.why)}\n")
+        console.print(f"[bold]Fix:[/bold] {escape(found.fix)}\n")
         if found.id in FIXERS:
             console.print("[green]Auto-fixable[/green] with `fixmyslop fix --safe-only`\n")
-        console.print(f"[dim]Silence one occurrence with a comment: fixmyslop-ignore[{found.id}][/dim]\n")
+        console.print(f"[dim]Silence one occurrence with a comment: {escape(f'fixmyslop-ignore[{found.id}]')}[/dim]\n")
         return
     table = Table(title=f"{APP_NAME} rules ({len(RULES)})", show_lines=False, header_style="bold")
     table.add_column("Rule", style="cyan", no_wrap=True)
