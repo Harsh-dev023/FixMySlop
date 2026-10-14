@@ -18,8 +18,13 @@ _UI_DIRECTION = """\
 - Keep the project's existing design tokens (tailwind config, CSS variables, theme). Do NOT invent new colors.
 - One accent color + neutrals. Red/amber/green only for real error/warning/success states.
 - No gradient text, no purple→pink gradients, no decorative blurred blobs, no glassmorphism stacks.
+- No glowing orbs or colored glows in any hue, no forever-pulsing status dots, no two-tone accent headlines,
+  no uppercase letter-spaced "eyebrow" label above every section.
+- Charts must come from real data; with no data, show an empty state instead of decorative bars.
 - Replace emoji used as icons with the icon library already in package.json (or remove them).
-- Rewrite marketing copy in plain, specific language. Never invent stats, ratings, logos or testimonials —
+- Rewrite marketing copy and taglines in plain, specific language ("Blocks the sites you choose during the
+  hours you set"), not hype ("revolutionize") or aphorisms ("make space for what matters", "intentional by
+  design", "less X. more Y."). Never invent stats, ratings, logos or testimonials —
   if real ones aren't available, remove the element and mention it in your summary.
 - Prefer borders/spacing over heavy shadows; motion only where it communicates state.
 """
@@ -126,8 +131,11 @@ These rules are checked automatically by `fixmyslop scan`. Code that violates th
 ### UI
 - Use the existing design tokens. One accent color plus neutrals; don't add one-off hex colors or `w-[347px]` values.
 - No purple→pink gradients, gradient text, glassmorphism stacks, decorative blurred blobs, or `hover:scale-105` on everything.
+- No glowing orbs or colored glows (any hue), pulsing status dots, two-tone accent headlines, or uppercase letter-spaced
+  "eyebrow" labels above every section. Charts only from real data — otherwise an empty state.
 - No emoji as icons — use the project's icon library.
-- Copy must be plain and specific. Never write "revolutionize", "seamless", "unlock the power of",
+- Copy must be plain and specific. Never write "revolutionize", "seamless", "unlock the power of", or calm-sounding
+  aphorisms ("make space for what matters", "intentional by design", "your data stays yours", "less X. more Y."),
   and never invent stats, ratings, logos, or testimonials.
 - Accessibility is not optional: alt text on images, `<button>` not clickable `<div>`, `aria-label`
   on icon-only buttons, visible focus styles, real `href`s.

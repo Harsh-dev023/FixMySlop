@@ -1,0 +1,27 @@
+:root {
+  --bg: #0b0f0d;
+  --accent: #86efac;
+}
+.eyebrow {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: #6b7f74;
+}
+.accent { color: var(--accent); }
+.orb {
+  width: 220px;
+  height: 220px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(134, 239, 172, 0.35), transparent 70%);
+  box-shadow: 0 0 80px rgba(134, 239, 172, 0.25);
+}
+.status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 2s ease-in-out infinite;
+}
+.card { box-shadow: 0 0 40px rgba(52, 211, 153, 0.12); }
+@keyframes pulse { 50% { opacity: .4; } }

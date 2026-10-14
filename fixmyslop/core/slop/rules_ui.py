@@ -7,7 +7,7 @@ from typing import Iterable
 
 from fixmyslop.core.slop.rule import (
     FileContext, Hit, rule, line_rule, iter_tags,
-    KIND_MARKUP, KIND_STYLE,
+    KIND_MARKUP, KIND_STYLE, KIND_SCRIPT,
 )
 from fixmyslop.core.slop.theme import colors_in, describe
 from fixmyslop.macros import (
@@ -60,6 +60,7 @@ def check_ai_gradient(ctx: FileContext) -> Iterable[Hit]:
                 yield Hit(n, line.strip(), "gradient of " + " + ".join(words))
 
 
+_RADIAL_GLOW = re.compile(r"radial-gradient\((?:[^()]|\([^()]*\))*\btransparent\b(?:[^()]|\([^()]*\))*\)", re.I)
 _GLOW = re.compile(
     r"\b(?:shadow|drop-shadow)-\[([^\]]+)\]"
     r"|\bshadow-(?:purple|violet|indigo|fuchsia|pink|blue|cyan|sky)-\d{3}(?:/\d+)?"
@@ -69,18 +70,25 @@ _GLOW = re.compile(
 
 @rule(
     "ui/neon-glow", "Colored neon glow shadows", SEVERITY_LOW, CATEGORY_UI_SLOP, UI,
-    why="Big colored glows (shadow-[0_0_40px_rgba(139,92,246,0.4)], shadow-purple-500/50) are the "
-        "dark-mode AI template look — they blur edges and compete with content.",
+    why="Big colored glows and glowing orbs (shadow-[0_0_40px_rgba(…)], radial-gradient(color, transparent)) "
+        "are the dark-mode AI template look in any hue — mint, cyan or violet. They blur edges and compete "
+        "with content.",
     fix="Use neutral elevation from the theme (shadow-sm/shadow-md or a 1px border). Reserve color for "
         "the one primary action.",
-    skip_tests=True, project_threshold=3, aggregate_per_file=True,
+    skip_tests=True, project_threshold=2, aggregate_per_file=True,
 )
 def check_neon_glow(ctx: FileContext) -> Iterable[Hit]:
-    """Flag colored (non-neutral) blurred shadows."""
+    """Flag colored (non-neutral) blurred shadows and radial glow orbs."""
     variables = _theme_vars(ctx)
     for n, line in enumerate(ctx.lines, 1):
         if ctx.is_comment(n):
             continue
+        glow = _RADIAL_GLOW.search(line)
+        if glow:
+            colored = [c for c in colors_in(glow.group(0), variables) if not c.is_neutral and c.sat > 0.35]
+            if colored and not any(c.is_ai_purple for c in colored):   # purple is reported by ui/ai-gradient
+                yield Hit(n, line.strip(), f"{describe(colored[0])} radial glow")
+                continue
         for match in _GLOW.finditer(line):
             body = next((g for g in match.groups() if g), None)
             if body is None:  # shadow-purple-500/50 style
@@ -171,10 +179,13 @@ line_rule(
 
 line_rule(
     "ui/gimmick-animation", "Attention-seeking animation", SEVERITY_LOW, CATEGORY_UI_SLOP, UI,
-    why="Bouncing arrows and pinging dots on static content are distracting filler.",
+    why="Bouncing arrows, pinging and forever-pulsing status dots on static content are distracting filler.",
     fix="Remove animate-bounce / animate-ping from decorative elements. Respect prefers-reduced-motion "
         "for any animation you keep.",
-    pattern=r"\banimate-(?:bounce|ping)\b",
+    pattern=r"\banimate-(?:bounce|ping)\b"
+            r"|\banimation\s*:[^;]*\b(?:pulse|glow|breathe|float|shimmer|blink)\b[^;]*\binfinite\b"
+            r"|\banimation\s*:[^;]*\binfinite\b[^;]*\b(?:pulse|glow|breathe|float|shimmer|blink)\b"
+            r"|(?=[^\n]*\banimate-pulse\b)(?=[^\n]*\brounded-full\b)(?=[^\n]*\b(?:h|size)-(?:1|1\.5|2)\b)",
     skip_tests=True,
 )
 
@@ -405,3 +416,106 @@ ARBITRARY_SIZE = re.compile(
     r"gap-x|gap-y|top|left|right|bottom|inset|text|leading|tracking|rounded|space-x|space-y)"
     r"-\[(\d+(?:\.\d+)?(?:px|rem|em))\]"
 )
+
+
+# ─── 2025–26 AI look: editorial dark-mode templates ─────────────────────────
+
+_TW_EYEBROW = re.compile(r"(?=[^\n]*\buppercase\b)(?=[^\n]*\btracking-(?:widest|wider|\[[0-9.]+(?:em|px|rem)\]))")
+
+
+@rule(
+    "ui/eyebrow-labels", "Uppercase \"eyebrow\" labels everywhere", SEVERITY_LOW, CATEGORY_UI_SLOP, (KIND_MARKUP,),
+    why="Tiny uppercase, widely letter-spaced labels above every section and card (\"A QUIETER KIND OF "
+        "PRODUCTIVITY\", \"SCREEN TIME TODAY\") are the signature of current AI-generated editorial UIs. "
+        "Used once they add hierarchy; used everywhere they're noise.",
+    fix="Keep at most one or two eyebrow labels on a page. Replace the rest with normal-case section headings "
+        "or remove them; let size and weight carry the hierarchy.",
+    skip_tests=True, aggregate_per_file=True,
+)
+def check_eyebrow_labels(ctx: FileContext) -> Iterable[Hit]:
+    """Flag files that use eyebrow labels 4+ times (Tailwind utilities or a CSS eyebrow class)."""
+    theme = getattr(getattr(ctx, "project", None), "theme", None)
+    classes = theme.eyebrow_classes if theme is not None else set()
+    class_rx = re.compile(r"class(?:Name)?\s*=\s*[\"'{`][^\"'}`]*\b(?:" + "|".join(map(re.escape, classes)) + r")\b") \
+        if classes else None
+    hits = []
+    for n, line in enumerate(ctx.lines, 1):
+        if ctx.is_comment(n):
+            continue
+        if _TW_EYEBROW.search(line) or (class_rx is not None and class_rx.search(line)):
+            hits.append(Hit(n, line.strip()))
+    if len(hits) >= 4:
+        yield from hits
+
+
+_ACCENT_SPAN = re.compile(
+    r"<(?:span|em|strong|mark)\b[^>]*\bclass(?:Name)?\s*=\s*[\"'{`][^\"'}`]*"
+    r"(?:\baccent|\bhighlight|\bgradient|\bbrand|\bprimary|text-transparent|"
+    r"\btext-(?!white\b|black\b|foreground\b|inherit\b|current\b|left\b|right\b|center\b|xs\b|sm\b|base\b|lg\b|[2-9]?xl\b)"
+    r"[a-z]+-\d{2,3})", re.IGNORECASE)
+
+
+@rule(
+    "ui/two-tone-headline", "Two-tone accent headline", SEVERITY_LOW, CATEGORY_UI_SLOP, (KIND_MARKUP,),
+    why="Headlines with the last words in the accent color (\"Make space for <span class=accent>what "
+        "matters.</span>\") are the default hero of AI-generated landing pages.",
+    fix="Set the headline in one color. If one idea needs emphasis, use weight or a single underline — "
+        "and write a headline specific enough not to need it.",
+    skip_tests=True,
+)
+def check_two_tone_headline(ctx: FileContext) -> Iterable[Hit]:
+    """Flag h1/h2 elements containing an accent-colored span."""
+    for name, _attrs, start, end in iter_tags(ctx, ("h1", "h2")):
+        close = ctx.text.find(f"</{name}>", end)
+        if close == -1 or close - end > 600:
+            continue
+        if _ACCENT_SPAN.search(ctx.text[end:close]):
+            line = ctx.line_of(start)
+            yield Hit(line, ctx.line_text(line).strip())
+
+
+line_rule(
+    "ui/aphorism-copy", "Generic aphorism copy", SEVERITY_MEDIUM, CATEGORY_UI_SLOP, (KIND_MARKUP,),
+    why="The newer AI copy voice — \"Make space for what matters\", \"Less autopilot. More intention.\", "
+        "\"Intentional by design\", \"Your data stays yours\", \"Focus, on purpose\" — sounds calm and says "
+        "nothing. Readers now recognise it as instantly as \"Revolutionize your workflow\".",
+    fix="Say concretely what the product does and the specific benefit (\"Blocks the sites you choose during "
+        "the hours you set\"). Cut taglines that could appear on any product.",
+    pattern=r"\b(?:make|making|create|find|clear)\s+(?:space|room|time)\s+for\s+(?:<[^>]+>\s*)?what\s+(?:truly\s+|really\s+)?matters\b"
+            r"|\bwhat\s+(?:truly|really)\s+matters\b"
+            r"|\b(?:intentional|private|calm|thoughtful|quiet|honest|human)\s+by\s+design\b"
+            r"|\bless\s+[a-z-]+\.\s*more\s+[a-z-]+\b"
+            r"|\ba\s+(?:quieter|calmer|kinder|gentler|smarter|better|new)\s+(?:kind|way)\s+(?:of|to)\b"
+            r"|\bstays?\s+yours\b"
+            r"|\b(?:focus|work|build|live|ship|browse|create)(?:,)?\s+on\s+purpose\b"
+            r"|\bwithout\s+the\s+(?:noise|clutter|chaos|bloat|overwhelm)\b"
+            r"|\bget\s+back\s+to\s+(?:your\s+life|what\s+matters)\b"
+            r"|\b(?:thoughtfully|beautifully)\s+(?:designed|crafted|built)\b"
+            r"|\bcrafted\s+with\s+(?:care|intention)\b",
+    skip_tests=True, project_threshold=2,
+)
+
+_INLINE_HEIGHT = re.compile(r"style\s*=\s*(?:\"|\{\{)[^\"}]*\bheight\s*:\s*['\"]?\d{1,3}%|\bh-\[\d{1,3}%\]")
+_HARDCODED_SERIES = re.compile(
+    r"\b(?:spark|bars?|chart|trend|heights?|graph|series|week|daily|history)\w*\s*[:=]\s*"
+    r"\[\s*\d{1,3}(?:\s*,\s*\d{1,3}){5,}\s*\]", re.IGNORECASE)
+
+
+@rule(
+    "ui/fake-chart", "Chart drawn from hard-coded data", SEVERITY_MEDIUM, CATEGORY_UI_SLOP, (KIND_MARKUP, KIND_SCRIPT),
+    why="A sparkline or bar chart whose heights are hard-coded (style=\"height: 40%\" ×7, sparkData = "
+        "[12, 18, 30, …]) shows a trend that doesn't exist — often right next to a \"0\" value. It's "
+        "decoration pretending to be data.",
+    fix="Render the chart from the real data, or show an honest empty state (\"No data yet\") until there is some.",
+    skip_tests=True, aggregate_per_file=True,
+)
+def check_fake_chart(ctx: FileContext) -> Iterable[Hit]:
+    """Flag 5+ hard-coded percentage bar heights in a file, or a literal numeric series named like chart data."""
+    inline = [n for n, line in enumerate(ctx.lines, 1) if not ctx.is_comment(n)
+              for _ in _INLINE_HEIGHT.finditer(line)]
+    if len(inline) >= 5:
+        yield Hit(inline[0], ctx.line_text(inline[0]).strip(), f"{len(inline)} hard-coded bar heights")
+    for match in _HARDCODED_SERIES.finditer(ctx.text):
+        line = ctx.line_of(match.start())
+        if not ctx.is_comment(line):
+            yield Hit(line, ctx.line_text(line).strip(), "hard-coded series")

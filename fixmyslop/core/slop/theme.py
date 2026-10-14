@@ -24,6 +24,10 @@ _SKIP_DIRS = {
 }
 _STYLE_EXT = {".css", ".scss", ".sass", ".less"}
 _VAR_DEF = re.compile(r"(--[\w-]+)\s*:\s*([^;{}]+);")
+_CSS_BLOCK = re.compile(r"([^{}]+)\{([^{}]*)\}")
+_UPPERCASE = re.compile(r"text-transform\s*:\s*uppercase", re.IGNORECASE)
+_WIDE_TRACKING = re.compile(r"letter-spacing\s*:\s*(?:0?\.(?:0[8-9]|[1-9])\d*em|[1-9]\d*(?:\.\d+)?px|0?\.\d+rem)",
+                            re.IGNORECASE)
 _ICON_LIBS = [
     "lucide-react", "lucide-vue-next", "lucide-svelte", "@heroicons/react", "@tabler/icons-react",
     "react-icons", "@phosphor-icons/react", "@radix-ui/react-icons", "@iconify/react", "phosphor-react",
@@ -175,6 +179,7 @@ class ThemeIndex:
     radius: str = ""
     tailwind_config: str = ""
     tailwind_colors: list = field(default_factory=list)
+    eyebrow_classes: set = field(default_factory=set)
 
     @classmethod
     def build(cls, root: Path) -> "ThemeIndex":
@@ -204,6 +209,9 @@ class ThemeIndex:
             return
         if len(text) > 400_000:
             return
+        for selector, body in _CSS_BLOCK.findall(text):
+            if _UPPERCASE.search(body) and _WIDE_TRACKING.search(body):
+                self.eyebrow_classes.update(re.findall(r"\.([A-Za-z][\w-]*)", selector))
         for name, value in _VAR_DEF.findall(text):
             # First definition wins (usually :root / light theme).
             self.variables.setdefault(name, value.strip())
