@@ -73,8 +73,8 @@ def _get_ram_gb() -> float | None:
                     line = line.strip()
                     if line.isdigit():
                         return round(int(line) / (1024 ** 3), 1)
-            except Exception:
-                pass
+            except (OSError, subprocess.SubprocessError, ValueError):
+                pass  # wmic missing (removed on recent Windows) — RAM stays unknown
         return None
 
 
@@ -95,8 +95,8 @@ def _detect_gpu() -> dict:
             vram_mb = float(parts[1].strip()) if len(parts) > 1 else 0
             vram_gb = round(vram_mb / 1024, 1)
             return {"name": name, "vram_gb": vram_gb}
-    except Exception:
-        pass
+    except (OSError, subprocess.SubprocessError, ValueError, IndexError):
+        pass  # no NVIDIA GPU / nvidia-smi — fall through to "unknown"
     return {"name": None, "vram_gb": None}
 
 

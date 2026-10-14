@@ -2,8 +2,6 @@
 Pytest fixtures — mock LLM client, temp repo factory, shared test data.
 """
 import pytest
-import tempfile
-from pathlib import Path
 from unittest.mock import MagicMock
 from core.issue import Issue, ScanReport
 from macros import SEVERITY_HIGH, SEVERITY_MEDIUM, CATEGORY_SECURITY, CATEGORY_AI_SMELL

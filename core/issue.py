@@ -85,3 +85,5 @@ class ScanReport:
     model_used: str = ""
     scan_mode: str = SCAN_MODE_TURBO
     tool_versions: dict = field(default_factory=dict)
+    lines_scanned: int = 0
+    grade: str = ""

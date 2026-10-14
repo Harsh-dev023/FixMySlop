@@ -21,8 +21,8 @@ if (
                 errors="replace",
                 line_buffering=True,
             )
-    except Exception:
-        pass
+    except (AttributeError, ValueError, OSError):
+        pass  # stdout isn't a real stream (IDE, redirected) — keep it as is
 
 from rich.console import Console
 from rich.table import Table
@@ -30,7 +30,7 @@ from rich.panel import Panel
 from rich.text import Text
 from rich import box
 from macros import (
-    SEVERITY_COLORS, SEVERITY_CRITICAL, SEVERITY_HIGH,
+    SEVERITY_CRITICAL, SEVERITY_HIGH,
     SEVERITY_MEDIUM, SEVERITY_LOW, SEVERITY_INFO,
     SCAN_MODE_TURBO, SCAN_MODE_DEEP,
 )
@@ -74,14 +74,12 @@ def _heads_up_mode_line(scan_mode: str) -> str:
 
 
 def print_banner(name: str, version: str):
-    """Print the FixMySlop ASCII banner."""
+    """Print the FixMySlop banner."""
     banner = Text()
-    banner.append("╔══════════════════════════════════════════╗\n", style="bold magenta")
-    banner.append(f"║  {name} v{version}".ljust(43) + "║\n", style="bold magenta")
-    banner.append("║  AI wrote your code. FixMySlop fixes it.  ║\n", style="magenta")
-    banner.append("╚══════════════════════════════════════════╝", style="bold magenta")
+    banner.append(f" {name} ", style="bold black on magenta")
+    banner.append(f" v{version}  ", style="bold magenta")
+    banner.append("the slop linter for the AI-agent era", style="dim")
     console.print(banner)
-    console.print()
 
 
 def print_report(report):
@@ -235,3 +233,92 @@ def print_analyzing(filename: str, model: str, current: int, total: int,
         f"elapsed {elapsed_str} — ETA {eta}"
     )
 
+
+
+# ─── Slop report (v0.3) ──────────────────────────────────────────────────────
+
+_GRADE_STYLES = {"A": "bold green", "B": "green", "C": "yellow", "D": "bright_red", "F": "bold red"}
+_SEVERITY_SHORT = {
+    SEVERITY_CRITICAL: "CRIT", SEVERITY_HIGH: "HIGH", SEVERITY_MEDIUM: "MED",
+    SEVERITY_LOW: "LOW", SEVERITY_INFO: "INFO",
+}
+
+
+def print_slop_report(report, relpath, limit: int = 60, fixable_count: int = 0,
+                      agent_hint: str = "", target: str = "."):
+    """Print findings grouped by file, a score summary, and concrete next steps."""
+    from collections import Counter, defaultdict
+    from macros import SEVERITY_RANK
+
+    by_file = defaultdict(list)
+    for issue in report.issues:
+        by_file[relpath(issue.file_path)].append(issue)
+
+    def file_rank(item):
+        path, issues = item
+        return (min(SEVERITY_RANK.get(i.severity, 9) for i in issues), path)
+
+    shown = 0
+    for path, issues in sorted(by_file.items(), key=file_rank):
+        if limit and shown >= limit:
+            break
+        console.print(f"\n[bold underline]{path}[/bold underline]")
+        for issue in sorted(issues, key=lambda i: (i.line_start, SEVERITY_RANK.get(i.severity, 9))):
+            if limit and shown >= limit:
+                break
+            style = _SEVERITY_STYLES.get(issue.severity, "white")
+            label = _SEVERITY_SHORT.get(issue.severity, issue.severity[:4])
+            line = Text()
+            line.append(f"  {issue.line_start:>5}  ", style="dim")
+            line.append(f"{label:<5}", style=style)
+            line.append(f" {issue.rule_id or issue.source_tool:<26} ", style="cyan")
+            line.append(issue.title)
+            console.print(line, overflow="ellipsis", no_wrap=True)
+            if issue.evidence:
+                evidence = " ".join(issue.evidence.split())
+                console.print(Text(f"         {evidence[:110]}", style="dim"), overflow="ellipsis", no_wrap=True)
+            shown += 1
+
+    hidden = len(report.issues) - shown
+    if hidden > 0:
+        console.print(f"\n[dim]… and {hidden} more. Use --limit 0 to show all, or -f html -s report.html.[/dim]")
+
+    console.print()
+    counts = Counter(i.severity for i in report.issues)
+    categories = Counter(i.category for i in report.issues)
+    grade_style = _GRADE_STYLES.get(report.grade, "bold")
+    summary = Text()
+    summary.append("Slop score ", style="bold")
+    summary.append(f"{report.slop_score:g}/100 ", style=grade_style)
+    summary.append(f" grade {report.grade or '-'}", style=grade_style)
+    summary.append(
+        f"   {len(report.issues)} issues · {report.scanned_files} files · "
+        f"{report.lines_scanned:,} lines · {report.scan_time_s:.2f}s",
+        style="dim",
+    )
+    sev_line = Text()
+    for sev in SEVERITY_RANK:
+        if counts.get(sev):
+            sev_line.append(f"{sev} {counts[sev]}   ", style=_SEVERITY_STYLES.get(sev, "white"))
+    cat_line = "  ·  ".join(f"{cat} {n}" for cat, n in categories.most_common())
+    body = Text("\n").join([summary, sev_line, Text(cat_line, style="dim")]) if report.issues else summary
+    console.print(Panel(body, border_style=grade_style.split()[-1], title="FixMySlop", title_align="left"))
+
+    if not report.issues:
+        console.print("[bold green]Clean.[/bold green] Nothing to fix.\n")
+        return
+    console.print("[bold]Next[/bold]")
+    if fixable_count:
+        console.print(f"  [cyan]fixmyslop fix {target} --safe-only[/cyan]   "
+                      f"[dim]auto-fix {fixable_count} issue(s) that can't change behavior[/dim]")
+    agent_label = agent_hint or "your agent"
+    console.print(f"  [cyan]fixmyslop fix {target}[/cyan]               "
+                  f"[dim]safe fixes, then hand the rest to {agent_label} and re-scan[/dim]")
+    console.print(f"  [cyan]fixmyslop scan {target} -f prompt[/cyan]    "
+                  "[dim]print a fix brief to paste/pipe into any agent[/dim]")
+    console.print()
+
+
+def stderr_console() -> Console:
+    """A console bound to stderr (for hook output and machine-format runs)."""
+    return Console(stderr=True)

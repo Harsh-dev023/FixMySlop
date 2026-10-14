@@ -1,9 +1,9 @@
 """
 Centralized logger — call get_logger(__name__) in every module.
-Logs to console (INFO+) and to file (DEBUG+).
+Logs to console (WARNING+) and to file (DEBUG+).
 """
 import logging
-from macros import LOG_FILE, APP_NAME
+from macros import LOG_FILE
 
 
 def get_logger(name: str) -> logging.Logger:
@@ -22,9 +22,9 @@ def get_logger(name: str) -> logging.Logger:
         "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
     ))
 
-    # Console handler — INFO level
+    # Console handler — WARNING level (INFO goes to the log file only, keeping CLI output clean)
     ch = logging.StreamHandler()
-    ch.setLevel(logging.INFO)
+    ch.setLevel(logging.WARNING)
     ch.setFormatter(logging.Formatter("[%(levelname)s] %(message)s"))
 
     logger.addHandler(fh)

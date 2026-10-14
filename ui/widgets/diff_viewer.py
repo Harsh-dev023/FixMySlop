@@ -3,9 +3,8 @@ Diff viewer widget — side-by-side code diff with syntax highlighting.
 """
 from PyQt5.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QTextEdit,
-    QLabel, QScrollBar,
+    QLabel,
 )
-from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor, QTextCharFormat, QFont
 
 

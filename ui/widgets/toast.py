@@ -2,9 +2,8 @@
 Toast widget — non-blocking notification toasts (success/error/info).
 Appears at the top-right corner and auto-dismisses.
 """
-from PyQt5.QtWidgets import QLabel, QWidget, QVBoxLayout, QGraphicsOpacityEffect
+from PyQt5.QtWidgets import QLabel, QWidget, QGraphicsOpacityEffect
 from PyQt5.QtCore import Qt, QTimer, QPropertyAnimation, QEasingCurve
-from PyQt5.QtGui import QColor
 
 
 class Toast(QLabel):

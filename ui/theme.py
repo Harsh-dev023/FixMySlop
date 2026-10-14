@@ -2,7 +2,6 @@
 Theme — loads and applies QSS stylesheets to the QApplication.
 Supports dark and light themes, loaded from assets/styles/.
 """
-from pathlib import Path
 from PyQt5.QtWidgets import QApplication
 from utils.logger import get_logger
 from macros import (

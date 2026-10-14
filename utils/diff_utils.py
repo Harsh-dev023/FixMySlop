@@ -3,7 +3,6 @@ Diff utilities — unified diff creation and patch formatting.
 Used by fix_engine and patch_applier to create and display diffs.
 """
 import difflib
-from pathlib import Path
 from utils.logger import get_logger
 
 logger = get_logger(__name__)

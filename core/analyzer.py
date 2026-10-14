@@ -9,6 +9,8 @@ from typing import Callable, Optional
 from core.issue import Issue
 from core.llm_client import LLMClient
 from core.static_tools import StaticToolRunner
+from core.slop.engine import SlopEngine
+from core.slop.rules_security import redact_secrets
 from core.prompts import SYSTEM_AUDIT_TURBO, SYSTEM_AUDIT_DEEP, AUDIT_USER_TEMPLATE
 from utils.logger import get_logger
 from macros import (
@@ -28,6 +30,24 @@ from macros import (
 )
 
 logger = get_logger(__name__)
+
+# Static-tool findings that duplicate a FixMySlop rule at the same line.
+_EQUIVALENT_RULES = {
+    "E722": "slop/bare-except",
+    "T100": "slop/debugger",
+    "S110": "slop/swallowed-exception",
+    "B110": "slop/swallowed-exception",
+    "S112": "slop/swallowed-exception",
+    "B112": "slop/swallowed-exception",
+    "S105": ("sec/hardcoded-credential", "sec/leaked-key"),
+    "S106": ("sec/hardcoded-credential", "sec/leaked-key"),
+    "B105": ("sec/hardcoded-credential", "sec/leaked-key"),
+    "B106": ("sec/hardcoded-credential", "sec/leaked-key"),
+    "S608": "sec/sql-injection",
+    "B608": "sec/sql-injection",
+    "S501": "sec/tls-disabled",
+    "B501": "sec/tls-disabled",
+}
 
 
 def _repair_and_parse(raw: str) -> list:
@@ -163,9 +183,14 @@ class Analyzer:
                  use_static_tools: bool = True,
                  max_retries: int = 2,
                  scan_mode: str = SCAN_MODE_TURBO,
-                 progress_callback: Optional[Callable[[str], None]] = None):
-        """Initialize analyzer with optional LLM client, static tool toggle, and retry count."""
+                 progress_callback: Optional[Callable[[str], None]] = None,
+                 slop_engine: Optional[SlopEngine] = None):
+        """Initialize analyzer with optional LLM client, static tool toggle, and retry count.
+
+        slop_engine enables the deterministic FixMySlop rules (no LLM needed).
+        """
         self.llm = llm_client
+        self.slop = slop_engine
         self.static = StaticToolRunner() if use_static_tools else None
         self.max_retries = max_retries
         self.scan_mode = scan_mode if scan_mode in {SCAN_MODE_TURBO, SCAN_MODE_DEEP} else SCAN_MODE_TURBO
@@ -196,8 +221,20 @@ class Analyzer:
             return
         try:
             self._progress_callback(message)
-        except Exception:
-            pass
+        except Exception as e:  # a broken UI callback must never abort a scan
+            logger.debug("Progress callback failed: %s", e)
+
+    def prepare(self, paths: list[Path]):
+        """Batch-run static tools over all files up front (one process per chunk)."""
+        if self.static:
+            try:
+                self.static.prefetch(paths)
+            except Exception as e:
+                logger.warning("Static tool prefetch failed: %s", e)
+
+    def finalize(self) -> list[Issue]:
+        """Project-level findings that need every file to have been seen."""
+        return self.slop.finalize() if self.slop else []
 
     def analyze_file(self, file_path: Path, content: str) -> list[Issue]:
         """
@@ -207,6 +244,13 @@ class Analyzer:
         issues: list[Issue] = []
         language = self._detect_language(file_path)
         self._emit_progress(f"[{file_path.name}] Starting analysis...")
+
+        # Pass 0: deterministic slop rules (instant, offline)
+        if self.slop:
+            try:
+                issues.extend(self.slop.check_file(file_path, content))
+            except Exception as e:
+                logger.warning("Slop rules failed for %s: %s", file_path.name, e)
 
         # Pass 1: Static tools (fast, deterministic)
         if self.static:
@@ -244,6 +288,8 @@ class Analyzer:
                 self._emit_progress(f"[{file_path.name}] LLM analysis failed. Continuing...")
 
         deduped = self._deduplicate(issues)
+        for issue in deduped:  # never copy a live secret into reports, SARIF or agent prompts
+            issue.evidence = redact_secrets(issue.evidence)
         if self.scan_mode == SCAN_MODE_TURBO:
             deduped.sort(
                 key=lambda issue: (
@@ -252,7 +298,9 @@ class Analyzer:
                     issue.rule_id,
                 )
             )
-            final = deduped[:self.max_issues]
+            # Turbo caps only the (slow, noisy) LLM findings; deterministic ones are always kept.
+            llm_issues = [i for i in deduped if i.source_tool == "llm"][:self.max_issues]
+            final = [i for i in deduped if i.source_tool != "llm"] + llm_issues
             self._emit_progress(f"[{file_path.name}] Done ({len(final)} total issues).")
             return final
 
@@ -410,10 +458,17 @@ class Analyzer:
         return ext_map.get(file_path.suffix.lower(), "code")
 
     def _deduplicate(self, issues: list[Issue]) -> list[Issue]:
-        """Remove near-duplicate issues (same file + line + rule)."""
+        """Remove near-duplicates: same file + line + rule, or a static-tool
+        finding that repeats a FixMySlop rule on the same line."""
+        own = {(i.line_start, i.rule_id) for i in issues if i.source_tool == "fixmyslop"}
         seen = set()
         unique = []
         for issue in issues:
+            equivalent = _EQUIVALENT_RULES.get(issue.rule_id, ())
+            if isinstance(equivalent, str):
+                equivalent = (equivalent,)
+            if any((issue.line_start, rule_id) in own for rule_id in equivalent):
+                continue
             key = (issue.file_path, issue.line_start, issue.rule_id)
             if key not in seen:
                 seen.add(key)

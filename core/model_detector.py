@@ -45,8 +45,8 @@ class ModelDetector:
             if resp.status_code == 200:
                 data = resp.json()
                 return [m["id"] for m in data.get("data", [])]
-        except Exception:
-            pass
+        except (requests.RequestException, ValueError, KeyError, TypeError) as e:
+            logger.debug("Backend probe failed for %s: %s", base_url, e)
         return None
 
     def get_all_models(self, base_url: str) -> list[str]:

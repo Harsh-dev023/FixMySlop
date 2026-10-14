@@ -13,7 +13,6 @@ from core.issue import ScanReport
 from core.report_builder import ReportBuilder
 from ui.widgets.file_tree import FileTreeWidget
 from ui.widgets.issue_card import IssueCard
-from ui.widgets.severity_badge import SeverityBadge
 from utils.config import Config
 from macros import (
     SEVERITY_ORDER,

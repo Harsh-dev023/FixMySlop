@@ -5,8 +5,7 @@ from pathlib import Path
 from core.report_builder import ReportBuilder, _strip_emojis_for_pdf
 from core.issue import Issue
 from macros import (
-    SEVERITY_CRITICAL, SEVERITY_HIGH, SEVERITY_MEDIUM,
-    REPORT_FORMAT_MARKDOWN, REPORT_FORMAT_JSON, REPORT_FORMAT_HTML,
+    SEVERITY_CRITICAL, REPORT_FORMAT_MARKDOWN, REPORT_FORMAT_JSON, REPORT_FORMAT_HTML,
     APP_NAME, SCAN_MODE_TURBO,
 )
 

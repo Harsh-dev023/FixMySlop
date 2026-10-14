@@ -5,7 +5,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="fixmyslop",
-    version="0.2.2",
+    version="0.3.0",
     packages=find_packages(include=["fixmyslop*", "cli*", "core*", "ui*", "utils*"]),
     py_modules=["main", "macros"],
     python_requires=">=3.10",
@@ -19,7 +19,7 @@ setup(
     extras_require={
         "gui": ["PyQt5>=5.15.10"],
         "analysis": ["ruff>=0.4.0", "bandit>=1.7.0"],
-        "dev": ["pytest>=8.0.0", "pytest-qt>=4.4.0"],
+        "dev": ["pytest>=8.0.0"],
     },
     entry_points={
         "console_scripts": [

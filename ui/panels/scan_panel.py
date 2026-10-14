@@ -8,17 +8,20 @@ from PyQt5.QtWidgets import (
     QLineEdit, QFileDialog, QLabel, QCheckBox, QProgressBar,
     QFrame, QScrollArea,
 )
-from PyQt5.QtCore import Qt, QThread, pyqtSignal, QObject
+from PyQt5.QtCore import QThread, pyqtSignal, QObject
 from ui.widgets.model_selector import ModelSelectorWidget
 from core.scanner import Scanner
 from core.analyzer import Analyzer
 from core.llm_client import LLMClient
 from core.report_builder import ReportBuilder
+from core.slop.engine import SlopEngine
+from utils.git_utils import git_root
 from core.issue import Issue, ScanReport
 from utils.config import Config
 from utils.logger import get_logger
 from macros import SCAN_MODE_TURBO, SCAN_MODE_DEEP
 import time
+from pathlib import Path
 
 logger = get_logger(__name__)
 
@@ -51,22 +54,26 @@ class ScanWorker(QObject):
                     model=self.model,
                 )
                 if not client.is_available():
-                    self.failed.emit(
-                        f"Cannot reach LLM backend at {self.config.base_url}. "
-                        "Is Ollama running?"
+                    self.status.emit(
+                        f"No LLM at {self.config.base_url} — running instant rule-based scan instead."
                     )
-                    return
+                    client = None
             else:
-                self.status.emit("Running static-only scan...")
+                self.status.emit("Running rule-based scan...")
 
             self.status.emit("Preparing scanner...")
             scanner = Scanner(self.repo_path)
+            target = Path(self.repo_path)
+            engine = SlopEngine(git_root(target) or target)
+            engine.config.allow(engine.relpath(target))
             analyzer = Analyzer(
                 llm_client=client,
                 use_static_tools=self.config.get("use_ruff", True),
                 scan_mode=self.scan_mode,
                 progress_callback=lambda message: self.status.emit(message),
+                slop_engine=engine,
             )
+            analyzer.prepare(scanner.files())
             builder = ReportBuilder()
             all_issues: list[Issue] = []
             start = time.time()
@@ -76,16 +83,18 @@ class ScanWorker(QObject):
             ):
                 issues = analyzer.analyze_file(file_path, content)
                 all_issues.extend(issues)
+            all_issues.extend(analyzer.finalize())
 
             self.status.emit("Building final report...")
             report = builder.build(
-                repo_path=self.repo_path,
+                repo_path=str(engine.root),
                 issues=all_issues,
                 total_files=scanner.file_count,
                 scanned_files=scanner.file_count,
                 scan_time_s=time.time() - start,
-                model_used=self.model,
-                scan_mode=self.scan_mode,
+                model_used=client.model if client else "rules + static tools",
+                scan_mode=self.scan_mode if client else "rules",
+                lines_scanned=engine.lines_scanned,
             )
             self.complete.emit(report)
         except Exception as e:
@@ -215,12 +224,12 @@ class ScanPanel(QWidget):
         self.use_ruff = QCheckBox("Ruff (Python linting)")
         self.use_bandit = QCheckBox("Bandit (Security analysis)")
         self.use_semgrep = QCheckBox("Semgrep (Pattern rules)")
-        self.use_llm = QCheckBox("LLM Deep Analysis")
+        self.use_llm = QCheckBox("LLM review (optional, slow — rules always run)")
 
         self.use_ruff.setChecked(self.config.get("use_ruff", True))
         self.use_bandit.setChecked(self.config.get("use_bandit", True))
         self.use_semgrep.setChecked(self.config.get("use_semgrep", False))
-        self.use_llm.setChecked(True)
+        self.use_llm.setChecked(self.config.get("use_llm", False))
         self.use_llm.toggled.connect(self._update_estimate)
 
         for cb in [self.use_ruff, self.use_bandit, self.use_semgrep, self.use_llm]:
@@ -319,7 +328,7 @@ class ScanPanel(QWidget):
             self.status_label.setText("Please select a folder first.")
             return
 
-        # Validate + auto-detect model before scan starts
+        # Validate + auto-detect model before scan starts (only when an LLM pass is requested)
         from core.model_detector import get_best_available_model
         from core.llm_client import LLMClient
 
@@ -328,7 +337,9 @@ class ScanPanel(QWidget):
             api_key=self.config.api_key,
             model=self.config.model or "",
         )
-        if not temp_client.is_available():
+        if not self.use_llm.isChecked():
+            pass
+        elif not temp_client.is_available():
             best = get_best_available_model(self.config.base_url)
             if best:
                 self.config.set("model", best)
@@ -336,11 +347,10 @@ class ScanPanel(QWidget):
                     f"Auto-switched model to: {best}"
                 )
             else:
+                self.use_llm.setChecked(False)
                 self.status_label.setText(
-                    f"No backend running. "
-                    "Start Ollama first."
+                    "No LLM backend running — scanning with rules only."
                 )
-                return
         elif temp_client.model != self.config.model:
             self.config.set("model", temp_client.model)
             self.status_label.setText(

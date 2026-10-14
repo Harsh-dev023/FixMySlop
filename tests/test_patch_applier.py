@@ -1,5 +1,4 @@
 """Tests for core/patch_applier.py."""
-from pathlib import Path
 from core.patch_applier import PatchApplier
 
 

@@ -8,6 +8,7 @@ import shutil
 from pathlib import Path
 from typing import Optional
 from core.issue import Issue
+from core.slop.rule import TEST_PATH_RE
 from macros import (
     TOOL_RUFF, TOOL_BANDIT, TOOL_SEMGREP,
     SEVERITY_HIGH, SEVERITY_MEDIUM, SEVERITY_LOW, SEVERITY_INFO,
@@ -16,6 +17,9 @@ from macros import (
 from utils.logger import get_logger
 
 logger = get_logger(__name__)
+
+_RUFF_HIGH = {"F821", "F822", "F823", "F632", "F702", "F704", "F706"}
+_RUFF_LOW = {"F401", "F841", "F811", "F541"}
 
 
 class StaticToolRunner:
@@ -36,6 +40,33 @@ class StaticToolRunner:
                 logger.info("Static tool '%s' found", tool)
             else:
                 logger.debug("Static tool '%s' not found on PATH", tool)
+        self._prefetched: dict[str, list[Issue]] = {}
+
+    def prefetch(self, paths: list[Path], chunk_size: int = 200):
+        """Run ruff and bandit once per chunk of Python files instead of once per file.
+
+        Results are cached and returned by run() — a large speedup on big repos.
+        """
+        python_files = [p for p in paths if p.suffix == ".py"]
+        for start in range(0, len(python_files), chunk_size):
+            chunk = python_files[start:start + chunk_size]
+            for path in chunk:
+                self._prefetched.setdefault(self._key(path), [])
+            if self._available[TOOL_RUFF]:
+                for issue in self._run_ruff_paths(chunk):
+                    self._prefetched.setdefault(self._key(Path(issue.file_path)), []).append(issue)
+            bandit_targets = [p for p in chunk if not TEST_PATH_RE.search(p.as_posix())]
+            if self._available[TOOL_BANDIT] and bandit_targets:
+                for issue in self._run_bandit_paths(bandit_targets):
+                    self._prefetched.setdefault(self._key(Path(issue.file_path)), []).append(issue)
+
+    @staticmethod
+    def _key(path: Path) -> str:
+        """Normalized cache key for a path."""
+        try:
+            return str(path.resolve()).lower()
+        except OSError:
+            return str(path).lower()
 
     def run(self, file_path: Path, content: str, language: str) -> list[Issue]:
         """
@@ -43,8 +74,10 @@ class StaticToolRunner:
         Only runs Python tools on .py files.
         """
         issues: list[Issue] = []
-
-        if language == "python" or file_path.suffix == ".py":
+        key = self._key(file_path)
+        if key in self._prefetched:
+            issues.extend(self._prefetched.pop(key))
+        elif language == "python" or file_path.suffix == ".py":
             if self._available[TOOL_RUFF]:
                 issues.extend(self._run_ruff(file_path))
             if self._available[TOOL_BANDIT]:
@@ -56,11 +89,16 @@ class StaticToolRunner:
         return issues
 
     def _run_ruff(self, file_path: Path) -> list[Issue]:
-        """Run Ruff linter and parse results into Issues."""
+        """Run Ruff linter on one file and parse results into Issues."""
+        return self._run_ruff_paths([file_path])
+
+    def _run_ruff_paths(self, paths: list[Path]) -> list[Issue]:
+        """Run Ruff once over several files."""
         try:
             result = subprocess.run(
-                ["ruff", "check", "--output-format=json", "--no-fix", str(file_path)],
-                capture_output=True, text=True, timeout=30,
+                ["ruff", "check", "--output-format=json", "--no-fix", "--exit-zero",
+                 *[str(p) for p in paths]],
+                capture_output=True, text=True, timeout=120, encoding="utf-8", errors="replace",
             )
             if not result.stdout.strip():
                 return []
@@ -68,14 +106,14 @@ class StaticToolRunner:
             data = json.loads(result.stdout)
             issues = []
             for item in data:
-                severity = self._ruff_severity(item.get("code", ""))
+                code = item.get("code") or "ruff_unknown"
                 issues.append(Issue(
-                    file_path=str(file_path),
-                    line_start=item.get("location", {}).get("row", 0),
-                    line_end=item.get("end_location", {}).get("row", 0),
-                    severity=severity,
-                    category=CATEGORY_MAINTAINABILITY,
-                    rule_id=item.get("code", "ruff_unknown"),
+                    file_path=item.get("filename") or str(paths[0]),
+                    line_start=(item.get("location") or {}).get("row", 0),
+                    line_end=(item.get("end_location") or {}).get("row", 0),
+                    severity=self._ruff_severity(code),
+                    category=CATEGORY_SECURITY if code.startswith("S") else CATEGORY_MAINTAINABILITY,
+                    rule_id=code,
                     title=item.get("message", "Ruff issue"),
                     description=item.get("message", ""),
                     evidence="",
@@ -83,29 +121,35 @@ class StaticToolRunner:
                 ))
             return issues
         except Exception as e:
-            logger.warning("Ruff failed for %s: %s", file_path, e)
+            logger.warning("Ruff failed for %s: %s", paths[0] if paths else "?", e)
             return []
 
     def _run_bandit(self, file_path: Path) -> list[Issue]:
-        """Run Bandit security scanner and parse results into Issues."""
+        """Run Bandit security scanner on one file and parse results into Issues."""
+        if TEST_PATH_RE.search(file_path.as_posix()):
+            return []
+        return self._run_bandit_paths([file_path])
+
+    def _run_bandit_paths(self, paths: list[Path]) -> list[Issue]:
+        """Run Bandit once over several files (skips B101 asserts and B404/B603/B607, which flag *safe* subprocess use)."""
         try:
             result = subprocess.run(
-                ["bandit", "-f", "json", "-q", str(file_path)],
-                capture_output=True, text=True, timeout=30,
+                ["bandit", "-f", "json", "-q", "-s", "B101,B404,B603,B607", *[str(p) for p in paths]],
+                capture_output=True, text=True, timeout=180, encoding="utf-8", errors="replace",
             )
             if not result.stdout.strip():
                 return []
 
             data = json.loads(result.stdout)
+            severity_map = {
+                "HIGH": SEVERITY_HIGH,
+                "MEDIUM": SEVERITY_MEDIUM,
+                "LOW": SEVERITY_LOW,
+            }
             issues = []
             for item in data.get("results", []):
-                severity_map = {
-                    "HIGH": SEVERITY_HIGH,
-                    "MEDIUM": SEVERITY_MEDIUM,
-                    "LOW": SEVERITY_LOW,
-                }
                 issues.append(Issue(
-                    file_path=str(file_path),
+                    file_path=item.get("filename") or str(paths[0]),
                     line_start=item.get("line_number", 0),
                     line_end=item.get("line_number", 0),
                     severity=severity_map.get(item.get("issue_severity", ""), SEVERITY_MEDIUM),
@@ -118,7 +162,7 @@ class StaticToolRunner:
                 ))
             return issues
         except Exception as e:
-            logger.warning("Bandit failed for %s: %s", file_path, e)
+            logger.warning("Bandit failed for %s: %s", paths[0] if paths else "?", e)
             return []
 
     def _run_semgrep(self, file_path: Path) -> list[Issue]:
@@ -158,13 +202,17 @@ class StaticToolRunner:
 
     @staticmethod
     def _ruff_severity(code: str) -> str:
-        """Map Ruff rule codes to severity levels."""
-        if code.startswith(("S", "B")):
-            return SEVERITY_HIGH  # Security / bugbear
-        elif code.startswith(("E", "W")):
-            return SEVERITY_MEDIUM  # Style / warnings
-        elif code.startswith(("F",)):
-            return SEVERITY_HIGH  # Pyflakes errors
+        """Map Ruff rule codes to severity levels.
+
+        Real bugs rank high; style and unused-name findings rank low so they
+        don't drown out security issues in the slop score.
+        """
+        if code.startswith("S") or code.startswith("E9") or code in _RUFF_HIGH:
+            return SEVERITY_HIGH  # security, undefined names, syntax errors
+        if code in _RUFF_LOW:
+            return SEVERITY_LOW  # unused imports/variables, empty f-strings
+        if code.startswith(("B", "F", "E7", "PLE")):
+            return SEVERITY_MEDIUM  # bugbear / pyflakes / statement errors
         return SEVERITY_LOW
 
     def get_tool_versions(self) -> dict[str, Optional[str]]:

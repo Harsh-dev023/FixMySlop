@@ -1,7 +1,7 @@
 """Tests for cli/cli_app.py."""
 from typer.testing import CliRunner
 from cli.cli_app import app
-from macros import APP_NAME, APP_VERSION
+from macros import APP_VERSION
 
 runner = CliRunner()
 

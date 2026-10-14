@@ -2,8 +2,7 @@
 Home panel — welcome screen with quick-start actions and recent scans.
 """
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QFrame, QSizePolicy, QScrollArea,
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QSizePolicy, QScrollArea,
 )
 from PyQt5.QtCore import Qt, pyqtSignal
 from utils.config import Config

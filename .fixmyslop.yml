@@ -1,0 +1,9 @@
+# FixMySlop scans itself in CI. The demo app and the bait file are slop on purpose.
+exclude:
+  - "examples/**"
+  - "test_bait.py"
+disable: []
+severity: {}
+fail_on: high
+hook:
+  min_severity: MEDIUM

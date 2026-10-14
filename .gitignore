@@ -29,6 +29,7 @@ Desktop.ini
 
 # FixMySlop
 .FixMySlop/
+.fixmyslop/
 *.bak
 
 # Testing

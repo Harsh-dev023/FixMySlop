@@ -3,18 +3,18 @@ FixMySlop macros — single source of truth for all constants.
 Import this at the top of every module that needs a constant.
 Never hardcode values anywhere else.
 """
+from pathlib import Path
 
 # ─── App Identity ───────────────────────────────────────────────────────────
 APP_NAME = "FixMySlop"
-APP_VERSION = "0.2.2"
-APP_DESCRIPTION = "AI wrote your code. FixMySlop fixes it."
+APP_VERSION = "0.3.0"
+APP_DESCRIPTION = "The slop linter for the AI-agent era. Catch it, then let your agent fix it."
 APP_AUTHOR = "Nihal Rodge"
 APP_LICENSE = "MIT"
-APP_URL = "https://github.com/nihalrodge/fixmyslop"
+APP_URL = "https://github.com/MrSpideyNihal/FixMySlop"
 APP_DOCS_URL = "https://fixmyslop.dev/docs"
 
 # ─── Paths ───────────────────────────────────────────────────────────────────
-from pathlib import Path
 
 ROOT_DIR = Path(__file__).parent
 CONFIG_DIR = Path.home() / ".fixmyslop"
@@ -78,13 +78,32 @@ CATEGORY_PERFORMANCE = "Performance"
 CATEGORY_MAINTAINABILITY = "Maintainability"
 CATEGORY_TESTING = "Missing Tests"
 CATEGORY_AI_SMELL = "AI Smell"
+CATEGORY_UI_SLOP = "UI Slop"
+CATEGORY_A11Y = "Accessibility"
+CATEGORY_DEPS = "Dependencies"
 
 # ─── Supported File Extensions ───────────────────────────────────────────────
 SUPPORTED_EXTENSIONS = {
-    ".py", ".js", ".ts", ".jsx", ".tsx",
+    ".py", ".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs", ".mts", ".cts",
+    ".vue", ".svelte", ".astro", ".html", ".htm",
+    ".css", ".scss", ".sass", ".less",
     ".go", ".rs", ".java", ".cpp", ".c",
     ".cs", ".rb", ".php", ".swift", ".kt",
 }
+
+# Severity threshold names accepted by --fail-on / --min-severity
+SEVERITY_RANK = {
+    SEVERITY_CRITICAL: 0, SEVERITY_HIGH: 1, SEVERITY_MEDIUM: 2,
+    SEVERITY_LOW: 3, SEVERITY_INFO: 4,
+}
+
+# ─── Slop engine ─────────────────────────────────────────────────────────────
+SLOP_TOOL = "fixmyslop"
+PROJECT_CONFIG_FILE = ".fixmyslop.yml"
+WORK_DIR_NAME = ".fixmyslop"          # per-project scratch dir (self-gitignored)
+MAX_HITS_PER_RULE_PER_FILE = 25
+IGNORE_MARKER = "fixmyslop-ignore"
+IGNORE_FILE_MARKER = "fixmyslop-ignore-file"
 
 # ─── Static Tool Names ───────────────────────────────────────────────────────
 TOOL_RUFF = "ruff"
@@ -115,6 +134,9 @@ REPORT_FORMAT_HTML = "html"
 REPORT_FORMAT_JSON = "json"
 REPORT_FORMAT_CSV = "csv"
 REPORT_FORMAT_PDF = "pdf"
+REPORT_FORMAT_SARIF = "sarif"
+REPORT_FORMAT_PROMPT = "prompt"
+REPORT_FORMAT_TEXT = "text"
 
 # ─── Signals / Events (string keys for Qt signal data) ───────────────────────
 EVENT_SCAN_STARTED = "scan_started"

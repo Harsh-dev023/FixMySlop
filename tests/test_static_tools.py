@@ -1,5 +1,4 @@
 """Tests for core/static_tools.py."""
-import shutil
 from core.static_tools import StaticToolRunner
 
 
@@ -28,8 +27,10 @@ class TestStaticToolRunner:
     def test_ruff_severity_mapping(self):
         """Should map ruff codes to appropriate severity levels."""
         assert StaticToolRunner._ruff_severity("S101") == "HIGH"  # Security
-        assert StaticToolRunner._ruff_severity("E501") == "MEDIUM"  # Style
-        assert StaticToolRunner._ruff_severity("F401") == "HIGH"  # Pyflakes
+        assert StaticToolRunner._ruff_severity("F821") == "HIGH"  # Undefined name
+        assert StaticToolRunner._ruff_severity("B006") == "MEDIUM"  # Bugbear
+        assert StaticToolRunner._ruff_severity("E501") == "LOW"  # Style
+        assert StaticToolRunner._ruff_severity("F401") == "LOW"  # Unused import
         assert StaticToolRunner._ruff_severity("D100") == "LOW"  # Default
 
     def test_get_tool_versions(self):

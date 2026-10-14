@@ -3,7 +3,6 @@ Config — loads ~/.fixmyslop/config.yaml, provides typed access,
 saves changes back. Always returns sane defaults if file is missing.
 """
 import yaml
-from pathlib import Path
 from macros import (
     CONFIG_FILE, CONFIG_DIR, DEFAULT_MODEL, DEFAULT_BASE_URL,
     DEFAULT_API_KEY, DEFAULT_TEMPERATURE, DEFAULT_THEME, DEFAULT_FONT_SIZE,
@@ -24,6 +23,7 @@ DEFAULTS = {
     "use_ruff": True,
     "use_bandit": True,
     "use_semgrep": False,
+    "use_llm": False,
     "auto_backup": True,
     "recent_paths": [],
 }

@@ -4,8 +4,7 @@ Generates fixes via LLM and shows them in the diff viewer.
 """
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QPushButton,
-    QListWidget, QListWidgetItem, QSplitter, QFrame,
-    QScrollArea,
+    QListWidget, QListWidgetItem, QSplitter,
 )
 from PyQt5.QtCore import Qt, QThread, pyqtSignal, QObject
 from core.issue import Issue, ScanReport
@@ -13,8 +12,6 @@ from core.fix_engine import FixEngine
 from core.llm_client import LLMClient
 from core.patch_applier import PatchApplier
 from ui.widgets.diff_viewer import DiffViewer
-from ui.widgets.severity_badge import SeverityBadge
-from ui.widgets.toast import ToastManager
 from utils.config import Config
 from utils.logger import get_logger
 

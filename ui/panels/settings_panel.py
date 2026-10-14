@@ -11,9 +11,7 @@ from PyQt5.QtCore import pyqtSignal
 from utils.config import Config
 from ui.theme import get_available_themes
 from macros import (
-    KNOWN_BACKENDS, DEFAULT_MODEL, DEFAULT_BASE_URL,
-    DEFAULT_API_KEY, DEFAULT_TEMPERATURE,
-    DEFAULT_FONT_SIZE, MIN_FONT_SIZE, MAX_FONT_SIZE,
+    KNOWN_BACKENDS, DEFAULT_MODEL, DEFAULT_FONT_SIZE, MIN_FONT_SIZE, MAX_FONT_SIZE,
 )
 from utils.logger import get_logger
 

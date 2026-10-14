@@ -1,0 +1,7 @@
+- id: fixmyslop
+  name: FixMySlop
+  description: Catch AI slop (UI tells, elided code, phantom packages, leaked secrets) before it's committed
+  entry: fixmyslop scan --fail-on high --no-static -f compact
+  language: python
+  types_or: [python, javascript, jsx, ts, tsx, html, css, scss, vue, svelte]
+  require_serial: true

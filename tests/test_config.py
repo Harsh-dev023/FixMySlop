@@ -1,5 +1,4 @@
 """Tests for utils/config.py."""
-import yaml
 from utils.config import Config, DEFAULTS
 
 
