@@ -51,14 +51,19 @@ def detect_agent() -> Optional[str]:
     return None
 
 
-def write_brief(root: Path, brief: str) -> Path:
-    """Write the brief to <root>/.fixmyslop/brief.md (the folder ignores itself in git)."""
+def work_dir(root: Path) -> Path:
+    """<root>/.fixmyslop/, created on demand; it ignores itself in git."""
     work = root / WORK_DIR_NAME
     work.mkdir(parents=True, exist_ok=True)
     gitignore = work / ".gitignore"
     if not gitignore.exists():
         gitignore.write_text("*\n", encoding="utf-8")
-    path = work / "brief.md"
+    return work
+
+
+def write_brief(root: Path, brief: str) -> Path:
+    """Write the brief to <root>/.fixmyslop/brief.md."""
+    path = work_dir(root) / "brief.md"
     path.write_text(brief, encoding="utf-8")
     return path
 

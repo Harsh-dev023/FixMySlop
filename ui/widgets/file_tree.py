@@ -41,10 +41,13 @@ class FileTreeWidget(QTreeWidget):
             dir_name = str(p.parent)
             dir_groups.setdefault(dir_name, {})[fpath] = file_issues
 
+        from ui.widgets.issue_card import display_path
         for dir_name, files in sorted(dir_groups.items()):
-            dir_item = QTreeWidgetItem([dir_name, "", ""])
-            dir_item.setExpanded(True)
+            label = display_path(dir_name)
+            dir_item = QTreeWidgetItem([label if label not in (".", "") else "(project root)", "", ""])
+            dir_item.setToolTip(0, dir_name)
             self.addTopLevelItem(dir_item)
+            dir_item.setExpanded(True)
 
             for fpath, file_issues in sorted(files.items()):
                 count = len(file_issues)

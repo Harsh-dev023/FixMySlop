@@ -36,7 +36,7 @@ class AboutPanel(QWidget):
         # ─── Logo / App Name ────────────────────────────────────────────
         name_label = QLabel(APP_NAME)
         name_label.setStyleSheet(
-            "font-size: 42px; font-weight: bold; color: #7c6af7; "
+            "font-size: 42px; font-weight: bold; color: #ecebe7; "
             "letter-spacing: 2px;"
         )
         layout.addWidget(name_label)
@@ -44,7 +44,7 @@ class AboutPanel(QWidget):
         # Tagline
         tagline = QLabel(APP_DESCRIPTION)
         tagline.setStyleSheet(
-            "font-size: 16px; color: #8892a4; font-style: italic; "
+            "font-size: 16px; color: #a3a29c; font-style: italic; "
             "padding-bottom: 4px;"
         )
         layout.addWidget(tagline)
@@ -62,7 +62,7 @@ class AboutPanel(QWidget):
             ("Version", f"v{APP_VERSION}"),
             ("Made by", APP_AUTHOR),
             ("License", f"{APP_LICENSE} — Open Source"),
-            ("GitHub", f'<a href="{APP_URL}" style="color: #7c6af7;">{APP_URL}</a>'),
+            ("GitHub", f'<a href="{APP_URL}" style="color: #ecebe7;">{APP_URL}</a>'),
         ]
 
         for label_text, value in info_items:
@@ -74,12 +74,12 @@ class AboutPanel(QWidget):
             key = QLabel(label_text)
             key.setFixedWidth(80)
             key.setStyleSheet(
-                "font-size: 13px; font-weight: bold; color: #8892a4;"
+                "font-size: 13px; font-weight: bold; color: #a3a29c;"
             )
             row_layout.addWidget(key)
 
             val = QLabel(value)
-            val.setStyleSheet("font-size: 13px; color: #e2e8f0;")
+            val.setStyleSheet("font-size: 13px; color: #ecebe7;")
             val.setTextFormat(Qt.RichText)
             val.setTextInteractionFlags(
                 Qt.TextSelectableByMouse | Qt.LinksAccessibleByMouse
@@ -124,7 +124,7 @@ class AboutPanel(QWidget):
         ]
         for tech in techs:
             tech_item = QLabel(f"  •  {tech}")
-            tech_item.setStyleSheet("font-size: 12px; color: #8892a4;")
+            tech_item.setStyleSheet("font-size: 12px; color: #a3a29c;")
             layout.addWidget(tech_item)
 
         layout.addStretch()
@@ -133,7 +133,7 @@ class AboutPanel(QWidget):
         btn_row = QHBoxLayout()
         btn_row.setSpacing(16)
 
-        guide_btn = QPushButton("📖  Open User Guide")
+        guide_btn = QPushButton("Open user guide")
         guide_btn.setObjectName("PrimaryButton")
         guide_btn.setFixedHeight(44)
         guide_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)

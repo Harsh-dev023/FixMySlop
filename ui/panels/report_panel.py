@@ -83,7 +83,7 @@ class ReportPanel(QWidget):
 
         # Stats labels
         self._stats_label = QLabel("")
-        self._stats_label.setStyleSheet("color: #8892a4;")
+        self._stats_label.setStyleSheet("color: #a3a29c;")
         header_layout.addWidget(self._stats_label)
 
         layout.addWidget(header)
@@ -117,13 +117,17 @@ class ReportPanel(QWidget):
     def load_report(self, report: ScanReport):
         """Load a scan report and display its contents."""
         self._report = report
+        from pathlib import Path
+        from ui.widgets import issue_card
+        root = Path(report.repo_path)
+        issue_card.DISPLAY_ROOT[:] = [(root if root.is_dir() else root.parent).resolve()]
         self._download_btn.setEnabled(True)
         self._file_tree.load_issues(report.issues)
-        mode_label = "DEEP 🔍" if report.scan_mode == SCAN_MODE_DEEP else "TURBO ⚡"
+        mode_label = "Rules" if report.scan_mode == "rules" else ("Deep" if report.scan_mode == SCAN_MODE_DEEP else "Turbo")
         self._stats_label.setText(
             f"Mode: {mode_label}  •  "
             f"{len(report.issues)} issues  •  "
-            f"Slop Score: {report.slop_score}/100  •  "
+            f"Slop score {report.slop_score:g}/100 ({report.grade or '-'})  •  "
             f"{report.scanned_files} files  •  "
             f"{report.scan_time_s:.1f}s"
         )
@@ -138,8 +142,8 @@ class ReportPanel(QWidget):
                 item.widget().deleteLater()
 
         if not issues:
-            empty = QLabel("No issues found! Your code looks clean. 🎉")
-            empty.setStyleSheet("color: #8892a4; padding: 48px;")
+            empty = QLabel("No issues found.")
+            empty.setStyleSheet("color: #a3a29c; padding: 48px;")
             empty.setAlignment(Qt.AlignCenter)
             self._issues_layout.insertWidget(0, empty)
             return

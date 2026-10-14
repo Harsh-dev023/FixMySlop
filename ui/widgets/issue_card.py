@@ -24,6 +24,20 @@ class _ClickableHeader(QFrame):
         super().mousePressEvent(event)
 
 
+DISPLAY_ROOT: list = []   # set by the report panel: paths are shown relative to the scanned root
+
+
+def display_path(file_path: str) -> str:
+    """Path relative to the scanned project when known."""
+    from pathlib import Path as _Path
+    if DISPLAY_ROOT:
+        try:
+            return _Path(file_path).resolve().relative_to(DISPLAY_ROOT[0]).as_posix()
+        except (ValueError, OSError):
+            pass
+    return file_path
+
+
 class IssueCard(QWidget):
     """
     Expandable card for a single issue.
@@ -62,10 +76,11 @@ class IssueCard(QWidget):
         self._badge.setAttribute(Qt.WA_TransparentForMouseEvents, True)
         top_row.addWidget(self._badge)
 
-        file_label = QLabel(
-            f"{self.issue.file_path}  •  Line {self.issue.line_start}-{self.issue.line_end}"
-        )
-        file_label.setStyleSheet("color: #8892a4; font-size: 11px;")
+        lines = (f"line {self.issue.line_start}" if self.issue.line_end <= self.issue.line_start
+                 else f"lines {self.issue.line_start}-{self.issue.line_end}")
+        rule = f"  •  {self.issue.rule_id}" if self.issue.rule_id else ""
+        file_label = QLabel(f"{display_path(self.issue.file_path)}  •  {lines}{rule}")
+        file_label.setStyleSheet("color: #a3a29c; font-size: 11px;")
         file_label.setWordWrap(True)
         file_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
         file_label.setAttribute(Qt.WA_TransparentForMouseEvents, True)
@@ -74,7 +89,7 @@ class IssueCard(QWidget):
         self._expand_btn = QPushButton("▼")
         self._expand_btn.setFixedSize(28, 28)
         self._expand_btn.setStyleSheet(
-            "border: none; color: #8892a4; font-size: 12px;"
+            "border: none; color: #a3a29c; font-size: 12px;"
         )
         self._expand_btn.clicked.connect(self._toggle_expand)
         top_row.addWidget(self._expand_btn)
@@ -100,7 +115,7 @@ class IssueCard(QWidget):
 
         if self.issue.evidence:
             evidence_label = QLabel("Evidence:")
-            evidence_label.setStyleSheet("font-weight: bold; color: #8892a4;")
+            evidence_label.setStyleSheet("font-weight: bold; color: #a3a29c;")
             detail_layout.addWidget(evidence_label)
 
             self._evidence_view = QPlainTextEdit()
@@ -110,8 +125,8 @@ class IssueCard(QWidget):
             self._evidence_view.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
             self._evidence_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
             self._evidence_view.setStyleSheet(
-                "background: #141820; padding: 8px; border-radius: 4px; "
-                "font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #e2e8f0;"
+                "background: #161615; padding: 8px; border-radius: 4px; "
+                "font-family: 'JetBrains Mono', monospace; font-size: 11px; color: #ecebe7;"
             )
             detail_layout.addWidget(self._evidence_view)
 

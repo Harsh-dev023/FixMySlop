@@ -175,12 +175,12 @@ class ScanPanel(QWidget):
             "padding: 8px 14px; font-weight: 600;"
             "}"
             "QPushButton:checked {"
-            "background: #7c3aed; border: 1px solid #7c3aed; color: #ffffff;"
+            "background: #ecebe7; border: 1px solid #ecebe7; color: #ffffff;"
             "}"
         )
 
-        self.turbo_mode_btn = QPushButton("⚡ Turbo")
-        self.deep_mode_btn = QPushButton("🔍 Deep")
+        self.turbo_mode_btn = QPushButton("Turbo")
+        self.deep_mode_btn = QPushButton("Deep")
         for btn in (self.turbo_mode_btn, self.deep_mode_btn):
             btn.setCheckable(True)
             btn.setFixedHeight(36)
@@ -202,14 +202,14 @@ class ScanPanel(QWidget):
             'Turbo: "Fast scan · Top 10 critical issues · ~30s"\n'
             'Deep:  "Full analysis · All issues · 2-5 mins"'
         )
-        self.mode_desc_label.setStyleSheet("color: #8892a4;")
+        self.mode_desc_label.setStyleSheet("color: #a3a29c;")
         layout.addWidget(self.mode_desc_label)
 
         # Scan estimate label (shown under model selector)
         self.estimate_label = QLabel("")
         self.estimate_label.setStyleSheet(
-            "background: #141820; border: 1px solid #1e2433; border-radius: 8px; "
-            "padding: 12px 16px; color: #8892a4;"
+            "background: #161615; border: 1px solid #1f1f1d; border-radius: 8px; "
+            "padding: 12px 16px; color: #a3a29c;"
         )
         self.estimate_label.setWordWrap(True)
         self.estimate_label.setVisible(False)
@@ -245,7 +245,7 @@ class ScanPanel(QWidget):
         layout.addWidget(self.progress_bar)
 
         self.status_label = QLabel("")
-        self.status_label.setStyleSheet("color: #8892a4;")
+        self.status_label.setStyleSheet("color: #a3a29c;")
         layout.addWidget(self.status_label)
 
         layout.addStretch()
@@ -305,14 +305,14 @@ class ScanPanel(QWidget):
                 use_llm=llm_enabled,
             )
             if llm_enabled:
-                mode_text = "Turbo ⚡" if self._scan_mode == SCAN_MODE_TURBO else "Deep 🔍"
+                mode_text = "Turbo" if self._scan_mode == SCAN_MODE_TURBO else "Deep"
                 tip_text = "Tip: Uncheck LLM Deep Analysis for instant static-only scan"
             else:
                 mode_text = "Static-only"
                 tip_text = "Tip: Enable LLM Deep Analysis for AI issue detection"
 
             self.estimate_label.setText(
-                f"📊  {total} files  •  {est['hardware']}  •  "
+                f"{total} files  •  {est['hardware']}  •  "
                 f"Estimated: {est['total_human']}\n"
                 f"Mode: {mode_text}\n"
                 f"{tip_text}"

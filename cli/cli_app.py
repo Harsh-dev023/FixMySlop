@@ -189,6 +189,7 @@ def scan(
     no_static: bool = typer.Option(False, "--no-static", help="Skip ruff/bandit/semgrep (rules only)"),
     online: bool = typer.Option(False, "--online", help="Verify suspicious imports against PyPI/npm"),
     limit: int = typer.Option(60, "--limit", help="Max issues printed in text mode (0 = all)"),
+    open_report: bool = typer.Option(False, "--open", help="Write the interactive HTML report and open it in a browser"),
     fix: bool = typer.Option(False, "--fix", help="Apply safe deterministic fixes after scanning"),
     llm: bool = typer.Option(False, "--llm", help="Also run an LLM review pass (slow; local or cloud model)"),
     mode: str = typer.Option(DEFAULT_SCAN_MODE, "--mode", help="LLM review depth: turbo | deep"),
@@ -250,6 +251,14 @@ def scan(
             print_success(f"Applied {sum(applied.values())} safe fix(es) in {len(applied)} file(s). "
                           "Review with `git diff`.")
             report.issues = [i for i in report.issues if not i.applied]
+
+    if open_report:
+        import webbrowser
+        from core.agents import work_dir
+        report_path = work_dir(Path(report.repo_path)) / "report.html"
+        report_path.write_text(ReportBuilder().export(report, "html"), encoding="utf-8")
+        webbrowser.open(report_path.as_uri())
+        (print_success if text_mode else stderr_console().print)(f"Opened {report_path}")
 
     if text_mode:
         agent_key = detect_agent()

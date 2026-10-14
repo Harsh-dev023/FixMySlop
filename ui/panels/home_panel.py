@@ -26,16 +26,17 @@ class _QuickActionCard(QFrame):
         layout.setContentsMargins(20, 16, 20, 16)
         layout.setSpacing(8)
 
-        icon = QLabel(icon_text)
-        icon.setStyleSheet("font-size: 24px;")
-        layout.addWidget(icon)
+        if icon_text:
+            icon = QLabel(icon_text)
+            icon.setStyleSheet("font-size: 24px;")
+            layout.addWidget(icon)
 
         title_label = QLabel(title)
         title_label.setStyleSheet("font-size: 14px; font-weight: bold;")
         layout.addWidget(title_label)
 
         desc_label = QLabel(description)
-        desc_label.setStyleSheet("font-size: 11px; color: #8892a4;")
+        desc_label.setStyleSheet("font-size: 11px; color: #a3a29c;")
         desc_label.setWordWrap(True)
         layout.addWidget(desc_label)
 
@@ -72,17 +73,17 @@ class HomePanel(QWidget):
         hero_label = QLabel(APP_NAME)
         hero_label.setObjectName("SectionTitle")
         hero_label.setStyleSheet(
-            "font-size: 32px; font-weight: bold; color: #7c6af7;"
+            "font-size: 32px; font-weight: bold; color: #ecebe7;"
         )
         layout.addWidget(hero_label)
 
         tagline = QLabel(APP_DESCRIPTION)
         tagline.setObjectName("SectionSubtitle")
-        tagline.setStyleSheet("font-size: 16px; color: #8892a4;")
+        tagline.setStyleSheet("font-size: 16px; color: #a3a29c;")
         layout.addWidget(tagline)
 
         version_label = QLabel(f"v{APP_VERSION}")
-        version_label.setStyleSheet("font-size: 12px; color: #546e7a;")
+        version_label.setStyleSheet("font-size: 12px; color: #77766f;")
         layout.addWidget(version_label)
 
         layout.addSpacing(16)
@@ -98,7 +99,7 @@ class HomePanel(QWidget):
         scan_card = _QuickActionCard(
             "Scan Repository",
             "Select a folder and run a full audit scan",
-            "🔍",
+            "",
         )
         scan_card.clicked.connect(self.navigate_scan.emit)
         cards_layout.addWidget(scan_card)
@@ -106,7 +107,7 @@ class HomePanel(QWidget):
         settings_card = _QuickActionCard(
             "Configure Model",
             "Set up your local LLM backend and preferences",
-            "⚙️",
+            "",
         )
         settings_card.clicked.connect(self.navigate_settings.emit)
         cards_layout.addWidget(settings_card)
@@ -114,7 +115,7 @@ class HomePanel(QWidget):
         docs_card = _QuickActionCard(
             "Documentation",
             "Learn about FixMySlop features and workflows",
-            "📖",
+            "",
         )
         cards_layout.addWidget(docs_card)
 
@@ -130,11 +131,11 @@ class HomePanel(QWidget):
         if recent_paths:
             for path in recent_paths[-5:]:
                 path_label = QLabel(f"  →  {path}")
-                path_label.setStyleSheet("color: #8892a4; font-size: 12px; padding: 4px 0;")
+                path_label.setStyleSheet("color: #a3a29c; font-size: 12px; padding: 4px 0;")
                 layout.addWidget(path_label)
         else:
             no_recent = QLabel("No recent scans. Start your first scan above!")
-            no_recent.setStyleSheet("color: #546e7a; font-style: italic;")
+            no_recent.setStyleSheet("color: #77766f; font-style: italic;")
             layout.addWidget(no_recent)
 
         layout.addStretch()

@@ -100,9 +100,9 @@ class DiffViewer(QWidget):
                 fmt.setBackground(QColor("#1f3c1f"))
                 fmt.setForeground(QColor("#69db7c"))
             elif line_type == "blank":
-                fmt.setBackground(QColor("#1a1a2e"))
-                fmt.setForeground(QColor("#1a1a2e"))
+                fmt.setBackground(QColor("#1a1a19"))
+                fmt.setForeground(QColor("#1a1a19"))
             else:
-                fmt.setForeground(QColor("#e2e8f0"))
+                fmt.setForeground(QColor("#ecebe7"))
 
             cursor.insertText(content + "\n", fmt)

@@ -158,3 +158,22 @@ def test_engine_is_fast(tmp_path):
     for path in tmp_path.glob("*.tsx"):
         engine.check_file(path, SLOPPY_TSX)
     assert time.time() - start < 5
+
+
+def test_html_report_is_self_contained_and_safe(tmp_path):
+    project = _project(tmp_path)
+    (project / "x.tsx").write_text('<p>Lorem ipsum</p>\n// "</script><script>alert(1)</script>"\n', encoding="utf-8")
+    report, _ = run_scan([str(project)], use_static=False)
+    page = ReportBuilder().export(report, "html")
+    assert page.startswith("<!DOCTYPE html>") and "FixMySlop" in page
+    assert "http://" not in page and "https://" not in page          # no external requests
+    assert page.count("<script") == 2                                 # data + app script only
+    assert "Copy fix prompt" in page and "ui/ai-gradient" in page
+
+
+def test_scan_open_writes_report(tmp_path, monkeypatch):
+    opened = []
+    monkeypatch.setattr("webbrowser.open", lambda url: opened.append(url))
+    result = runner.invoke(app, ["scan", str(_project(tmp_path)), "--no-static", "--open", "--fail-on", "none"])
+    assert result.exit_code == 0
+    assert (tmp_path / ".fixmyslop" / "report.html").exists() and opened

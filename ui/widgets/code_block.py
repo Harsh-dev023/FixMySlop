@@ -39,7 +39,7 @@ class PythonHighlighter(QSyntaxHighlighter):
 
         # Comments
         comment_format = QTextCharFormat()
-        comment_format.setForeground(QColor("#546e7a"))
+        comment_format.setForeground(QColor("#77766f"))
         comment_format.setFontItalic(True)
         self._rules.append((QRegularExpression(r"#[^\n]*"), comment_format))
 

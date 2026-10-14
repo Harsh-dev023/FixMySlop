@@ -78,7 +78,7 @@ class FixPanel(QWidget):
 
         h_layout.addStretch()
         self._status = QLabel("")
-        self._status.setStyleSheet("color: #8892a4;")
+        self._status.setStyleSheet("color: #a3a29c;")
         h_layout.addWidget(self._status)
         layout.addWidget(header)
 

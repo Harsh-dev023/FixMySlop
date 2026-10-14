@@ -61,6 +61,7 @@ Optional: `pip install "fixmyslop[analysis]"` adds Ruff + Bandit findings for Py
 ```bash
 fixmyslop scan                    # whole repo
 fixmyslop scan --changed          # only what changed vs main (+ uncommitted)
+fixmyslop scan --open             # interactive HTML report with copy-to-agent fix prompts
 fixmyslop fix --safe-only         # behavior-preserving auto-fixes
 fixmyslop fix                     # safe fixes → hand the rest to your agent → re-scan
 fixmyslop init --claude           # make Claude Code check its own work, live
@@ -184,7 +185,7 @@ Skip a file: `fixmyslop-ignore-file` in its first lines. Paths passed explicitly
 ## Output formats
 
 `-f text` (default) · `compact` (one line per issue, for agents) · `prompt` (fix brief) · `sarif` · `json` ·
-`markdown` · `html` · `csv` · `pdf`. Save with `-s report.html` (format inferred from the extension).
+`markdown` · `html` (interactive: filters, search, "copy fix prompt" per file) · `csv` · `pdf`. Save with `-s report.html` (format inferred from the extension).
 Exit codes: `0` clean, `1` issues at/above `--fail-on`, `2` usage error.
 
 ## Slop score
@@ -198,7 +199,8 @@ are comparable. Grades: A < 10 ≤ B < 25 ≤ C < 45 ≤ D < 65 ≤ F. FixMySlop
 OpenAI-compatible endpoint via `--base-url`/`--api-key`/`--model`, or `FIXMYSLOP_*` env vars). It's slow and
 non-deterministic, so it's off by default.
 
-`fixmyslop gui` (needs `fixmyslop[gui]`) opens the PyQt desktop app: scan, browse the report, review fixes.
+`fixmyslop gui` (needs `fixmyslop[gui]`) opens the desktop app: scan, browse findings by file, export reports.
+For most people `fixmyslop scan --open` is the faster way to browse results.
 
 ![Report panel](screenshots/report1.png)
 

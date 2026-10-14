@@ -89,17 +89,10 @@ class MainWindow(QMainWindow):
 
         # Navigation buttons
         self._nav_buttons = {}
-        nav_items = [
-            ("Home", "🏠"),
-            ("Scan", "🔍"),
-            ("Report", "📊"),
-            ("Fix", "🔧"),
-            ("Settings", "⚙️"),
-            ("About", "ℹ️"),
-        ]
+        nav_items = ["Home", "Scan", "Report", "Fix", "Settings", "About"]
 
-        for idx, (label, icon) in enumerate(nav_items):
-            btn = QPushButton(f"  {icon}  {label}")
+        for idx, label in enumerate(nav_items):
+            btn = QPushButton(label)
             btn.setObjectName("NavButton")
             btn.setCheckable(True)
             btn.clicked.connect(lambda _, i=idx: self._navigate(i))
@@ -111,7 +104,7 @@ class MainWindow(QMainWindow):
         # Version at bottom
         from macros import APP_VERSION
         version_label = QLabel(f"v{APP_VERSION}")
-        version_label.setStyleSheet("color: #546e7a; font-size: 11px;")
+        version_label.setStyleSheet("color: #77766f; font-size: 11px;")
         version_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(version_label)
 

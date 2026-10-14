@@ -21,9 +21,9 @@ class ProgressRing(QWidget):
         self._max_value = 100
         self._indeterminate = False
         self._angle = 0
-        self._color = QColor("#7c6af7")
-        self._bg_color = QColor("#1e2433")
-        self._text_color = QColor("#e2e8f0")
+        self._color = QColor("#ecebe7")
+        self._bg_color = QColor("#1f1f1d")
+        self._text_color = QColor("#ecebe7")
 
         self.setFixedSize(size, size)
 
