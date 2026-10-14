@@ -141,6 +141,8 @@ def run_scan(paths: Optional[list[str]], *, changed: bool = False, base: Optiona
         scan_mode=scan_mode if llm_client else "rules",
         lines_scanned=engine.lines_scanned,
     )
+    if any(i.rule_id.startswith(("ui/", "a11y/")) for i in issues):
+        report.design_context = engine.theme.design_context()
     return report, engine
 
 
@@ -337,7 +339,7 @@ def fix(
         return
 
     target = " ".join(paths) if paths else "."
-    brief = build_fix_brief(remaining, rel, targets=target)
+    brief = build_fix_brief(remaining, rel, targets=target, design_context=report.design_context)
     if dry_run:
         console.print()
         console.print(brief, markup=False, highlight=False)
@@ -374,7 +376,8 @@ def fix(
                 default=True):
             raise typer.Exit(0)
         for round_no in range(1, max(1, rounds) + 1):
-            brief_path = agent_mod.write_brief(root, build_fix_brief(remaining, rel, targets=target))
+            brief_path = agent_mod.write_brief(root, build_fix_brief(remaining, rel, targets=target,
+                                                                     design_context=report.design_context))
             console.rule(f"[bold]{name}[/bold] · round {round_no} · {len(remaining)} issue(s)")
             try:
                 code = agent_mod.run_agent(chosen, root, brief_path, custom_cmd=agent_cmd)

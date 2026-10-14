@@ -105,7 +105,10 @@ def call_tool(name: str, args: dict) -> dict:
             return _text(header + " Clean.")
         footer = ("\n\nFix these, then call check_slop again. For a genuine false positive add a "
                   "`fixmyslop-ignore[<rule-id>]` comment with a reason.")
-        return _text(header + "\n" + compact_findings(report.issues, lambda p: relative_path(report, p)) + footer)
+        design = (f"\n\nThis project's design system (use it when fixing UI items):\n{report.design_context}"
+                  if report.design_context else "")
+        return _text(header + "\n" + compact_findings(report.issues, lambda p: relative_path(report, p))
+                     + design + footer)
 
     if name == "explain_rule":
         rule = RULES.get(str(args.get("rule_id", "")))

@@ -200,7 +200,7 @@ line_rule(
     why="`any` switches off the type checker — the reason you're using TypeScript.",
     fix="Use the real type, `unknown` + narrowing, or a generic.",
     pattern=r":\s*any\b(?!-)|\bas any\b|<any>|\bany\[\]", flags=0,
-    skip_tests=True, project_threshold=5,
+    skip_tests=True, project_threshold=5, aggregate_per_file=True,
 )
 
 line_rule(
@@ -273,6 +273,8 @@ def check_narrating_comment(ctx: FileContext) -> Iterable[Hit]:
         body = _COMMENT_PREFIX.sub("", line).strip().rstrip("*/}").strip().rstrip(".:")
         if not body or _PRAGMA.search(body) or len(body.split()) > 9:
             continue
+        if re.search(r"[{};=]|\bfrom\s+[\"']|\w\(.*\)", body):
+            continue  # commented-out code / usage example, not narration
         if _IMPORT_NARRATION.match(body):
             yield Hit(n, line.strip())
             continue

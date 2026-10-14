@@ -9,6 +9,7 @@ from core.slop.rule import (
     FileContext, Hit, rule, line_rule, iter_tags,
     KIND_MARKUP, KIND_STYLE,
 )
+from core.slop.theme import colors_in, describe
 from macros import (
     SEVERITY_HIGH, SEVERITY_MEDIUM, SEVERITY_LOW,
     CATEGORY_UI_SLOP, CATEGORY_A11Y,
@@ -18,34 +19,78 @@ UI = (KIND_MARKUP, KIND_STYLE)
 
 # ─── Visual tells ────────────────────────────────────────────────────────────
 
-_PURPLE_FAMILY = r"(?:purple|violet|indigo|fuchsia|pink)"
-_TW_FROM_PURPLE = re.compile(rf"\bfrom-{_PURPLE_FAMILY}-\d{{2,3}}\b")
-_TW_TO_ACCENT = re.compile(r"\bto-(?:pink|purple|violet|indigo|blue|fuchsia|cyan|rose|sky)-\d{2,3}\b")
+_PURPLE_FAMILY = r"(?:purple|violet|indigo|fuchsia)"
+_TW_GRADIENT_STOP = re.compile(r"\b(?:from|via|to)-(\w+)-\d{2,3}\b")
+_TW_AI_FAMILIES = {"purple", "violet", "indigo", "fuchsia"}
+_TW_PARTNER_FAMILIES = {"pink", "purple", "violet", "indigo", "blue", "fuchsia", "cyan", "rose", "sky"}
 _CSS_GRADIENT = re.compile(r"(?:linear|radial|conic)-gradient\(", re.IGNORECASE)
-_CSS_PURPLE = re.compile(
-    r"#(?:667eea|764ba2|6366f1|8b5cf6|a855f7|7c3aed|9333ea|ec4899|d946ef|c026d3|4f46e5|"
-    r"7c6af7|a78bfa|c084fc|f472b6|818cf8)\b|\b(?:purple|violet|indigo|magenta|fuchsia)\b",
-    re.IGNORECASE,
+
+
+def _theme_vars(ctx: FileContext) -> dict:
+    """CSS variables from the project's theme (empty when unavailable)."""
+    theme = getattr(getattr(ctx, "project", None), "theme", None)
+    return theme.variables if theme is not None else {}
+
+
+@rule(
+    "ui/ai-gradient", "Purple/violet \"AI gradient\"", SEVERITY_MEDIUM, CATEGORY_UI_SLOP, UI,
+    why="Violet/purple gradients and glows (from-purple-600 to-pink-500, #667eea→#764ba2, "
+        "oklch(… 292) radial glows) are the most recognisable tell of an AI-generated UI. "
+        "They make the product look like every other template.",
+    fix="Replace with a solid surface from the theme (background/card/muted) and put the brand color on "
+        "ONE element (the primary button). If depth is needed, use a subtle same-hue tint or a border — "
+        "not a multi-hue gradient or glow.",
+    skip_tests=True,
+)
+def check_ai_gradient(ctx: FileContext) -> Iterable[Hit]:
+    """Flag gradients whose colors fall in the violet/purple/magenta band (any color syntax)."""
+    variables = _theme_vars(ctx)
+    for n, line in enumerate(ctx.lines, 1):
+        if ctx.is_comment(n):
+            continue
+        stops = set(_TW_GRADIENT_STOP.findall(line))
+        if stops & _TW_AI_FAMILIES and len(stops & _TW_PARTNER_FAMILIES) >= 2:
+            yield Hit(n, line.strip(), "Tailwind " + " → ".join(sorted(stops)))
+            continue
+        if _CSS_GRADIENT.search(line):
+            colors = colors_in(line[line.lower().find("gradient("):], variables)
+            purple = [c for c in colors if c.is_ai_purple]
+            if purple:
+                words = sorted({describe(c) for c in colors if not c.is_neutral})
+                yield Hit(n, line.strip(), "gradient of " + " + ".join(words))
+
+
+_GLOW = re.compile(
+    r"\b(?:shadow|drop-shadow)-\[([^\]]+)\]"
+    r"|\bshadow-(?:purple|violet|indigo|fuchsia|pink|blue|cyan|sky)-\d{3}(?:/\d+)?"
+    r"|box-shadow\s*:\s*([^;]+)|boxShadow\s*:\s*['\"`]([^'\"`]+)",
 )
 
 
 @rule(
-    "ui/ai-gradient", "Purple-to-pink \"AI gradient\"", SEVERITY_MEDIUM, CATEGORY_UI_SLOP, UI,
-    why="The purple→pink/blue gradient is the single most recognisable tell of an AI-generated UI. "
-        "It makes the product look like every other template.",
-    fix="Replace with a solid surface using the project's brand/accent color, or a subtle tonal "
-        "gradient within ONE hue. If the project has no brand color, pick one and use it consistently.",
-    skip_tests=True,
+    "ui/neon-glow", "Colored neon glow shadows", SEVERITY_LOW, CATEGORY_UI_SLOP, UI,
+    why="Big colored glows (shadow-[0_0_40px_rgba(139,92,246,0.4)], shadow-purple-500/50) are the "
+        "dark-mode AI template look — they blur edges and compete with content.",
+    fix="Use neutral elevation from the theme (shadow-sm/shadow-md or a 1px border). Reserve color for "
+        "the one primary action.",
+    skip_tests=True, project_threshold=3, aggregate_per_file=True,
 )
-def check_ai_gradient(ctx: FileContext) -> Iterable[Hit]:
-    """Flag Tailwind and CSS purple-family gradients."""
+def check_neon_glow(ctx: FileContext) -> Iterable[Hit]:
+    """Flag colored (non-neutral) blurred shadows."""
+    variables = _theme_vars(ctx)
     for n, line in enumerate(ctx.lines, 1):
         if ctx.is_comment(n):
             continue
-        if _TW_FROM_PURPLE.search(line) and _TW_TO_ACCENT.search(line):
-            yield Hit(n, line.strip())
-        elif _CSS_GRADIENT.search(line) and len(_CSS_PURPLE.findall(line)) >= 1:
-            yield Hit(n, line.strip())
+        for match in _GLOW.finditer(line):
+            body = next((g for g in match.groups() if g), None)
+            if body is None:  # shadow-purple-500/50 style
+                yield Hit(n, line.strip(), match.group(0))
+                break
+            blur = [float(x) for x in re.findall(r"(?:^|[\s_,])(\d{2,3})px", body)]
+            colored = [c for c in colors_in(body, variables) if not c.is_neutral and c.sat > 0.35]
+            if colored and blur and max(blur) >= 16:
+                yield Hit(n, line.strip(), match.group(0)[:60])
+                break
 
 
 _GRADIENT_TEXT = re.compile(r"\bbg-clip-text\b|background-clip:\s*text|backgroundClip:\s*['\"]text", re.IGNORECASE)
@@ -100,7 +145,7 @@ line_rule(
         "(e.g. a sticky header) if the design calls for it.",
     pattern=r"backdrop-blur[\w-]*[^\n]*\b(?:bg|border)-(?:white|black|slate-\d+|gray-\d+)/\d+"
             r"|\b(?:bg|border)-(?:white|black)/\d+[^\n]*backdrop-blur|backdrop-filter:\s*blur",
-    skip_tests=True, project_threshold=3,
+    aggregate_per_file=True, skip_tests=True, project_threshold=3,
 )
 
 line_rule(
@@ -121,7 +166,7 @@ line_rule(
     fix="Remove the scale transforms. Use a subtle color/border/shadow change for hover, and reserve "
         "motion for elements where it communicates something.",
     pattern=r"\bhover:scale-1[01]\d\b|whileHover=\{\{\s*scale",
-    skip_tests=True, project_threshold=4,
+    aggregate_per_file=True, skip_tests=True, project_threshold=4,
 )
 
 line_rule(
@@ -140,7 +185,7 @@ line_rule(
     fix="Use one elevation scale from the theme. Most cards need a 1px border or shadow-sm; reserve "
         "large shadows for overlays (dialogs, popovers).",
     pattern=r"\bshadow-(?:xl|2xl)\b",
-    skip_tests=True, project_threshold=8,
+    aggregate_per_file=True, skip_tests=True, project_threshold=8,
 )
 
 line_rule(
@@ -155,17 +200,6 @@ line_rule(
 )
 
 line_rule(
-    "ui/arbitrary-values", "Magic-number Tailwind sizes", SEVERITY_LOW, CATEGORY_UI_SLOP, (KIND_MARKUP,),
-    why="Arbitrary pixel values like p-[13px] or w-[347px] bypass the spacing scale, which is why "
-        "AI layouts feel slightly 'off' and inconsistent.",
-    fix="Snap each arbitrary value to the nearest step of the Tailwind/theme spacing scale.",
-    pattern=r"(?<![\w-])-?(?:p|m|px|py|pt|pb|pl|pr|mx|my|mt|mb|ml|mr|w|h|min-w|max-w|min-h|max-h|gap|"
-            r"gap-x|gap-y|top|left|right|bottom|inset|text|leading|tracking|rounded|space-x|space-y)"
-            r"-\[\d+(?:\.\d+)?(?:px|rem|em)\]",
-    skip_tests=True, project_threshold=6,
-)
-
-line_rule(
     "ui/arbitrary-color", "Hardcoded hex colors in classes", SEVERITY_LOW, CATEGORY_UI_SLOP, (KIND_MARKUP,),
     why="bg-[#1a1a2e]-style one-off colors bypass the theme, so the palette drifts with every "
         "generated component.",
@@ -173,7 +207,7 @@ line_rule(
         "and use the token class instead.",
     pattern=r"(?<![\w-])(?:bg|text|border|from|to|via|fill|stroke|ring|outline|shadow|decoration)"
             r"-\[#[0-9a-fA-F]{3,8}\]",
-    skip_tests=True, project_threshold=5,
+    aggregate_per_file=True, skip_tests=True, project_threshold=5,
 )
 
 line_rule(
@@ -189,7 +223,7 @@ line_rule(
     why="Piles of !important mean styles are fighting each other instead of being structured.",
     fix="Remove !important and fix specificity/order at the source.",
     pattern=r"!important\b",
-    skip_tests=True, project_threshold=8,
+    aggregate_per_file=True, skip_tests=True, project_threshold=8,
 )
 
 # ─── Copy tells ──────────────────────────────────────────────────────────────
@@ -351,13 +385,23 @@ def check_dead_link(ctx: FileContext) -> Iterable[Hit]:
     skip_tests=True,
 )
 def check_focus_removed(ctx: FileContext) -> Iterable[Hit]:
-    """Flag outline removal that isn't paired with a focus-visible style."""
-    file_has_focus_visible = "focus-visible" in ctx.text
+    """Flag outline removal that isn't paired with a focus style in the same class string."""
+    file_has_focus_visible = "focus-visible" in ctx.text or ":focus" in ctx.text
+    focus_style = re.compile(r"\b(?:focus|focus-visible|focus-within|group-focus|peer-focus)[\w-]*:"
+                             r"(?:ring|outline|border|shadow|bg|underline)")
     for n, line in enumerate(ctx.lines, 1):
         if ctx.is_comment(n):
             continue
-        if re.search(r"(?<![\w-])(?:focus:)?outline-none\b", line):
-            if not re.search(r"\b(?:focus|focus-visible|focus-within):(?:ring|outline|border|shadow)", line):
+        if re.search(r"(?<![\w:-])(?:focus:)?outline-none\b", line):
+            window = "\n".join(ctx.lines[max(0, n - 4):n + 3])
+            if not focus_style.search(window):
                 yield Hit(n, line.strip())
         elif re.search(r"\boutline:\s*(?:none|0)\b", line) and not file_has_focus_visible:
             yield Hit(n, line.strip())
+
+
+ARBITRARY_SIZE = re.compile(
+    r"(?<![\w-])-?(?:p|m|px|py|pt|pb|pl|pr|mx|my|mt|mb|ml|mr|w|h|size|min-w|max-w|min-h|max-h|gap|"
+    r"gap-x|gap-y|top|left|right|bottom|inset|text|leading|tracking|rounded|space-x|space-y)"
+    r"-\[(\d+(?:\.\d+)?(?:px|rem|em))\]"
+)

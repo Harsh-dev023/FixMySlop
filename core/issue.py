@@ -87,3 +87,4 @@ class ScanReport:
     tool_versions: dict = field(default_factory=dict)
     lines_scanned: int = 0
     grade: str = ""
+    design_context: str = ""    # the project's design tokens, for agent fix briefs

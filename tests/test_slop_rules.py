@@ -186,3 +186,69 @@ def test_secrets_are_redacted(tmp_path):
     leaked = [i for i in issues if i.rule_id == "sec/leaked-key"]
     assert leaked
     assert "abcdefghijklmnop" not in leaked[0].evidence + leaked[0].description
+
+
+# ─── Real-world calibration (from scanning Lovable/v0 apps vs hand-built repos) ─────────
+
+@pytest.mark.parametrize("line", [
+    'style={{ background: "linear-gradient(135deg, oklch(0.62 0.24 292), oklch(0.46 0.24 296))" }}',
+    '<div className="bg-[radial-gradient(circle_at_17%_4%,rgb(139_92_246_/_0.34),transparent_38%)]" />',
+    '<div className="bg-gradient-to-b from-blue-500 to-violet-500" />',
+    '"radial-gradient(circle, rgba(80,170,255,.35), rgba(175,80,255,.3) 45%, transparent 72%)",',
+])
+def test_ai_gradient_any_color_syntax(tmp_path, line):
+    assert "ui/ai-gradient" in scan(tmp_path, "A.tsx", line)
+
+
+@pytest.mark.parametrize("line", [
+    '<div className="bg-gradient-to-b from-slate-50 to-white" />',
+    'style={{ background: "linear-gradient(180deg, #ffffff, #f4f4f5)" }}',
+    '<div className="[mask-image:radial-gradient(circle,#000_52%,transparent_74%)]" />',
+])
+def test_neutral_gradients_are_fine(tmp_path, line):
+    assert "ui/ai-gradient" not in scan(tmp_path, "A.tsx", line)
+
+
+def test_gradient_through_css_variables(tmp_path):
+    css = ":root { --primary: 262 83% 58%; --accent: 330 81% 60%; }\n" \
+          ".hero { background: linear-gradient(135deg, hsl(var(--primary)), hsl(var(--accent))); }\n"
+    assert "ui/ai-gradient" in scan(tmp_path, "index.css", css)
+
+
+def test_neon_glow(tmp_path):
+    glow = '<b className="shadow-[0_0_40px_rgba(139,92,246,0.5)]" />\n'
+    assert "ui/neon-glow" in scan(tmp_path / "a", "A.tsx", glow * 3)
+    assert "ui/neon-glow" not in scan(tmp_path / "b", "A.tsx", '<b className="shadow-[0_1px_2px_rgba(0,0,0,0.1)]" />\n' * 3)
+
+
+def test_vendored_shadcn_components_are_skipped(tmp_path):
+    extra = {"components.json": "{}"}
+    code = '<input className="outline-none" />\n<div onClick={x}>y</div>\n'
+    assert scan(tmp_path, "src/components/ui/input.tsx", code, extra=extra) == []
+    assert "a11y/focus-removed" in scan(tmp_path, "src/components/Form.tsx", code, extra=extra)
+
+
+def test_noisy_rules_aggregate_per_file(tmp_path):
+    code = "".join(f"const v{n} = x as any;\n" for n in range(8))
+    path = tmp_path / "a.ts"
+    path.write_text(code, encoding="utf-8")
+    engine = SlopEngine(tmp_path)
+    issues = [i for i in engine.check_file(path, code) + engine.finalize() if i.rule_id == "slop/ts-any"]
+    assert len(issues) == 1 and "8 occurrences" in issues[0].description
+
+
+def test_commented_out_code_is_not_narration(tmp_path):
+    code = '// import { supabase } from "@/integrations/supabase/client";\nexport const x = 1;\n'
+    assert "slop/narrating-comment" not in scan(tmp_path, "client.ts", code)
+
+
+def test_design_context_reads_project_tokens(tmp_path):
+    from core.slop.theme import ThemeIndex
+    (tmp_path / "components.json").write_text("{}", encoding="utf-8")
+    (tmp_path / "package.json").write_text('{"dependencies": {"lucide-react": "1"}}', encoding="utf-8")
+    (tmp_path / "index.css").write_text(
+        ":root { --primary: 221 83% 53%; --background: 0 0% 100%; --radius: 0.5rem; }\n"
+        "body { font-family: 'Geist', sans-serif; }\n", encoding="utf-8")
+    context = ThemeIndex.build(tmp_path).design_context()
+    assert "blue" in context and "bg-primary" in context
+    assert "lucide-react" in context and "Geist" in context and "0.5rem" in context

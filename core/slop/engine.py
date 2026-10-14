@@ -18,6 +18,7 @@ from core.slop.config import SlopConfig, load_config
 from core.slop.rule import RULES, FileContext, Hit, Rule, KIND_MARKUP, KIND_STYLE
 from core.slop import rules_ui, rules_code, rules_security, rules_deps  # noqa: F401  (register rules)
 from core.slop.rules_deps import DependencyIndex
+from core.slop.theme import ThemeIndex
 from macros import (
     SEVERITY_CRITICAL, SEVERITY_HIGH, SEVERITY_MEDIUM, SEVERITY_LOW, SEVERITY_INFO,
     SEVERITY_RANK, CATEGORY_UI_SLOP, SLOP_TOOL,
@@ -45,7 +46,19 @@ RULES["ui/palette-sprawl"] = Rule(
         "replace raw hex values with them.",
 )
 
+RULES["ui/off-scale-values"] = Rule(
+    id="ui/off-scale-values", title="Spacing/type off the scale", severity=SEVERITY_LOW,
+    category=CATEGORY_UI_SLOP, kinds=frozenset({KIND_MARKUP}),
+    why="Dozens of one-off sizes (text-[11px], w-[347px], tracking-[0.3em]…) mean every component was "
+        "eyeballed separately — the layout feels slightly off and nothing lines up.",
+    fix="Snap arbitrary values to the Tailwind/theme scale (text-xs, w-80, tracking-widest). Keep an "
+        "arbitrary value only where a real constraint requires it, and add it to the theme if it repeats.",
+)
+
 RAINBOW_FAMILY_LIMIT = 6
+OFF_SCALE_LIMIT = 20
+_HAIRLINES = {"0.5px", "1px", "2px", "3px"}
+_ALWAYS_ON_VENDORED = ("sec/", "deps/")
 PALETTE_HEX_LIMIT = 24
 SEVERITY_WEIGHTS = {
     SEVERITY_CRITICAL: 10.0, SEVERITY_HIGH: 5.0, SEVERITY_MEDIUM: 2.0,
@@ -66,7 +79,10 @@ class SlopEngine:
         self.online = online
         self.rules = [r for r in RULES.values() if r.check is not None and self.config.rule_enabled(r.id)]
         self._deps: Optional[DependencyIndex] = None
+        self._theme: Optional[ThemeIndex] = None
+        self._off_scale: dict[str, tuple[str, int, int]] = {}
         self._pending: dict[str, list[Issue]] = defaultdict(list)
+        self._occurrences: dict[str, int] = defaultdict(int)   # raw hits, before per-file aggregation
         self._color_families: dict[str, tuple[str, int]] = {}
         self._hex_by_file: dict[str, set[str]] = defaultdict(set)
         self.lines_scanned = 0
@@ -78,6 +94,17 @@ class SlopEngine:
         if self._deps is None:
             self._deps = DependencyIndex(self.root, online=self.online)
         return self._deps
+
+    @property
+    def theme(self) -> ThemeIndex:
+        """Lazily index the project's design tokens (CSS variables, fonts, icons)."""
+        if self._theme is None:
+            self._theme = ThemeIndex.build(self.root)
+        return self._theme
+
+    def is_vendored(self, rel: str) -> bool:
+        """shadcn/ui's generated components/ui/* is library code, not the author's slop."""
+        return "/components/ui/" in "/" + rel and self.theme.shadcn
 
     def relpath(self, path: Path) -> str:
         """Project-relative POSIX path (falls back to the absolute path)."""
@@ -100,25 +127,30 @@ class SlopEngine:
         self.files_scanned += 1
         self.lines_scanned += sum(1 for line in ctx.lines if line.strip())
 
+        vendored = self.is_vendored(rel)
         issues: list[Issue] = []
         for rule in self.rules:
             if not rule.applies_to(ctx):
                 continue
+            if vendored and not rule.id.startswith(_ALWAYS_ON_VENDORED):
+                continue
             try:
-                hits = list(rule.check(ctx))
+                hits = [h for h in rule.check(ctx) if not self._suppressed(ctx, h.line, rule.id)]
             except Exception as e:
                 logger.warning("Rule %s crashed on %s: %s", rule.id, rel, e)
                 continue
+            self._occurrences[rule.id] += len(hits)
+            if rule.aggregate_per_file and len(hits) > 1:
+                lines = ", ".join(str(h.line) for h in hits[:12]) + (" …" if len(hits) > 12 else "")
+                hits = [Hit(hits[0].line, hits[0].evidence, f"{len(hits)} occurrences in this file (lines {lines})")]
             for hit in hits[:MAX_HITS_PER_RULE_PER_FILE]:
-                if self._suppressed(ctx, hit.line, rule.id):
-                    continue
                 issue = self._to_issue(rule, ctx, hit)
                 if rule.project_threshold or rule.once_per_project:
                     self._pending[rule.id].append(issue)
                 else:
                     issues.append(issue)
 
-        if not ctx.is_test and (ctx.has(KIND_MARKUP) or ctx.has(KIND_STYLE)):
+        if not ctx.is_test and not vendored and (ctx.has(KIND_MARKUP) or ctx.has(KIND_STYLE)):
             self._observe_palette(ctx)
         return issues
 
@@ -166,6 +198,13 @@ class SlopEngine:
                 self._color_families.setdefault(family, (str(ctx.path), n))
             for hex_color in rules_ui.HEX_COLOR.findall(line):
                 self._hex_by_file[str(ctx.path)].add(_normalize_hex(hex_color))
+            if ctx.has(KIND_MARKUP):
+                for match in rules_ui.ARBITRARY_SIZE.finditer(line):
+                    value = match.group(0).lstrip("-")
+                    if match.group(1) in _HAIRLINES:
+                        continue
+                    path, first_line, count = self._off_scale.get(value, (str(ctx.path), n, 0))
+                    self._off_scale[value] = (path, first_line, count + 1)
 
     def finalize(self) -> list[Issue]:
         """Emit threshold-gated rule hits and project-level palette findings."""
@@ -177,9 +216,10 @@ class SlopEngine:
                 if len(pending) > 1:
                     first.description = f"Seen in {len(pending)} places. {first.description}"
                 issues.append(first)
-            elif len(pending) >= rule.project_threshold:
+            elif self._occurrences[rule_id] >= rule.project_threshold:
                 issues.extend(pending)
         self._pending.clear()
+        self._occurrences.clear()
 
         if self.config.rule_enabled("ui/rainbow-palette") and len(self._color_families) > RAINBOW_FAMILY_LIMIT:
             path, line = min(self._color_families.values())
@@ -187,6 +227,18 @@ class SlopEngine:
             issues.append(self._project_issue(
                 "ui/rainbow-palette", path, line,
                 f"{len(self._color_families)} accent color families in use: {families}",
+            ))
+        if self.config.rule_enabled("ui/off-scale-values") and len(self._off_scale) >= OFF_SCALE_LIMIT:
+            by_file: dict[str, int] = defaultdict(int)
+            for path, _, count in self._off_scale.values():
+                by_file[path] += count
+            worst = max(by_file, key=by_file.get)
+            first = min(line for path, line, _ in self._off_scale.values() if path == worst)
+            top = sorted(self._off_scale.items(), key=lambda kv: -kv[1][2])[:8]
+            issues.append(self._project_issue(
+                "ui/off-scale-values", worst, first,
+                f"{len(self._off_scale)} distinct off-scale values, most used: "
+                + ", ".join(f"{value} ×{meta[2]}" for value, meta in top),
             ))
         all_hex = set().union(*self._hex_by_file.values()) if self._hex_by_file else set()
         if self.config.rule_enabled("ui/palette-sprawl") and len(all_hex) > PALETTE_HEX_LIMIT:

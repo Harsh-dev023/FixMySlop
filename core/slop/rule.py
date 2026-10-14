@@ -163,6 +163,7 @@ class Rule:
     project_threshold: int = 0     # >0: only report when the project total reaches this
     once_per_project: bool = False
     fixable: bool = False
+    aggregate_per_file: bool = False   # collapse many hits in one file into a single finding
 
     def applies_to(self, ctx: FileContext) -> bool:
         """True when this rule should run on the given file."""

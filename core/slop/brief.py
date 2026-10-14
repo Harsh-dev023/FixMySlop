@@ -35,7 +35,8 @@ _RULES_OF_ENGAGEMENT = """\
 """
 
 
-def build_fix_brief(issues: list[Issue], relpath: Callable[[str], str], targets: str = ".") -> str:
+def build_fix_brief(issues: list[Issue], relpath: Callable[[str], str], targets: str = ".",
+                    design_context: str = "") -> str:
     """Render a markdown task list an agent (Claude Code, Codex, Cursor…) can execute."""
     if not issues:
         return "# FixMySlop fix brief\n\nNothing to fix — the scan is clean.\n"
@@ -59,6 +60,8 @@ def build_fix_brief(issues: list[Issue], relpath: Callable[[str], str], targets:
     ]
     if has_ui:
         out.append(_UI_DIRECTION)
+        if design_context:
+            out += ["## This project's design system (use it)", design_context, ""]
 
     fix_hints: dict[str, str] = {}
     out.append("## Issues")

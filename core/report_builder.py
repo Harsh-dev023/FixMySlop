@@ -148,7 +148,8 @@ class ReportBuilder:
                        f"(grade {report.grade}), {report.scanned_files} files")
             return summary + "\n" + compact_findings(report.issues, lambda p: relative_path(report, p))
         elif fmt == REPORT_FORMAT_PROMPT:
-            return build_fix_brief(report.issues, lambda p: relative_path(report, p))
+            return build_fix_brief(report.issues, lambda p: relative_path(report, p),
+                                   design_context=report.design_context)
         else:
             return self._to_markdown(report)
 
