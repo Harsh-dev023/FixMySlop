@@ -31,3 +31,18 @@ jobs:
           skip-existing: true
           print-hash: true
           verbose: true
+
+  publish-npm:
+    runs-on: ubuntu-latest
+    env:
+      NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          registry-url: "https://registry.npmjs.org"
+      - name: Publish npm launcher
+        if: env.NODE_AUTH_TOKEN != ''
+        working-directory: npm
+        run: npm publish --access public

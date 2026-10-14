@@ -1,0 +1,12 @@
+{
+  "name": "fixmyslop",
+  "version": "0.3.0",
+  "description": "The slop linter for the AI-agent era: catch AI slop in UI and code in milliseconds, then let your agent fix it.",
+  "bin": { "fixmyslop": "bin/fixmyslop.js" },
+  "files": ["bin/", "README.md"],
+  "engines": { "node": ">=18" },
+  "keywords": ["ai-slop", "linter", "tailwind", "react", "accessibility", "claude-code", "mcp", "cursor", "lovable", "v0"],
+  "repository": { "type": "git", "url": "git+https://github.com/MrSpideyNihal/FixMySlop.git" },
+  "homepage": "https://github.com/MrSpideyNihal/FixMySlop#readme",
+  "license": "MIT"
+}

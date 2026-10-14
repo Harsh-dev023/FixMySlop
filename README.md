@@ -54,6 +54,8 @@ pipx install fixmyslop            # or: pip install fixmyslop
 pipx install git+https://github.com/MrSpideyNihal/FixMySlop
 ```
 
+JavaScript project? `npx fixmyslop scan` works too (it runs the same CLI through `uvx`/`pipx`).
+
 Optional: `pip install "fixmyslop[analysis]"` adds Ruff + Bandit findings for Python, `"fixmyslop[gui]"` adds the desktop app.
 
 ## 30 seconds
