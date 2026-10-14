@@ -1,8 +1,9 @@
 # FixMySlop
 
+[![PyPI](https://img.shields.io/pypi/v/fixmyslop)](https://pypi.org/project/fixmyslop/)
+[![npm](https://img.shields.io/npm/v/fixmyslop)](https://www.npmjs.com/package/fixmyslop)
 [![CI](https://github.com/MrSpideyNihal/FixMySlop/actions/workflows/python-package.yml/badge.svg)](https://github.com/MrSpideyNihal/FixMySlop/actions/workflows/python-package.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python 3.10+](https://img.shields.io/badge/Python-3.10+-green.svg)](https://python.org)
 
 **The slop linter for the AI-agent era.** FixMySlop catches the things AI coding agents get wrong — the
 purple-gradient landing page, the `// ... existing code ...` that silently deleted half a file, the npm
@@ -10,25 +11,7 @@ package that doesn't exist, the OpenAI key in `NEXT_PUBLIC_` — in milliseconds
 hands a precise fix list to the agent you already use (Claude Code, Codex, Cursor, Gemini) and re-scans to
 prove it's fixed.
 
-```text
-$ fixmyslop scan
-
-src/components/Hero.tsx
-     12  MED   ui/ai-gradient             Purple-to-pink "AI gradient"
-     14  MED   ui/gradient-text           Gradient-filled text
-     15  MED   ui/marketing-slop          Generic AI marketing copy
-     18  MED   ui/fake-social-proof       Invented stats or testimonials
-     22  MED   a11y/icon-button           Icon-only button without a label
-src/lib/api.ts
-      8  HIGH  slop/elided-code           AI-elided code ("... existing code")
-      1  HIGH  sec/public-env-secret      Secret in a public env var
-src/server.py
-      3  HIGH  deps/phantom-import        Package may not exist
-
-┌─ FixMySlop ───────────────────────────────────────────────────────┐
-│ Slop score 100/100  grade F   31 issues · 3 files · 0.09s         │
-└───────────────────────────────────────────────────────────────────┘
-```
+![fixmyslop scan output: 31 issues across UI slop, accessibility, code slop, security and dependencies, slop score 100, grade F](screenshots/cli.svg)
 
 ## Why this exists when you already have a frontier model
 
@@ -50,11 +33,11 @@ mode still exists (`--llm`), but it's optional — the rules engine is the produ
 
 ```bash
 pipx install fixmyslop            # or: pip install fixmyslop
-# latest from GitHub:
-pipx install git+https://github.com/MrSpideyNihal/FixMySlop
+npx fixmyslop scan                # JavaScript projects: no install step (runs via uvx/pipx)
 ```
 
-JavaScript project? `npx fixmyslop scan` works too (it runs the same CLI through `uvx`/`pipx`).
+`npx` needs Python 3.10+ plus [uv](https://docs.astral.sh/uv/) or pipx on the machine; it always runs the
+FixMySlop version that matches the npm package.
 
 Optional: `pip install "fixmyslop[analysis]"` adds Ruff + Bandit findings for Python, `"fixmyslop[gui]"` adds the desktop app.
 
@@ -69,7 +52,12 @@ fixmyslop fix                     # safe fixes → hand the rest to your agent �
 fixmyslop init --claude           # make Claude Code check its own work, live
 ```
 
-Try it on the bundled demo: `fixmyslop scan examples/slop-app`.
+Try it on the bundled demo: `fixmyslop scan examples/slop-app --open`.
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="screenshots/report-dark.png">
+  <img alt="Interactive HTML report: slop score, severity filters, findings grouped by file, each with evidence, a concrete fix and a copy-fix-prompt button" src="screenshots/report-light.png">
+</picture>
 
 ## What it catches
 
@@ -130,6 +118,12 @@ fixmyslop init --agents          # AGENTS.md (Codex, Gemini, Jules, Copilot agen
 claude mcp add fixmyslop -- fixmyslop mcp     # or register the MCP server anywhere
 ```
 
+MCP config for JSON-configured clients (Cursor, Windsurf, Claude Desktop):
+
+```json
+{ "mcpServers": { "fixmyslop": { "command": "npx", "args": ["-y", "fixmyslop", "mcp"] } } }
+```
+
 ### Hand off a fix
 
 ```bash
@@ -165,7 +159,7 @@ Findings show up as inline PR annotations (SARIF). pre-commit:
 ```yaml
 repos:
   - repo: https://github.com/MrSpideyNihal/FixMySlop
-    rev: v0.3.0
+    rev: v0.3.1
     hooks: [{ id: fixmyslop }]
 ```
 
@@ -204,7 +198,7 @@ non-deterministic, so it's off by default.
 `fixmyslop gui` (needs `fixmyslop[gui]`) opens the desktop app: scan, browse findings by file, export reports.
 For most people `fixmyslop scan --open` is the faster way to browse results.
 
-![Report panel](screenshots/report1.png)
+![Desktop app report view](screenshots/gui.png)
 
 ## Development
 
@@ -212,6 +206,7 @@ For most people `fixmyslop scan --open` is the faster way to browse results.
 pip install -e ".[analysis,dev]"
 pytest -q
 fixmyslop scan . --fail-on medium     # the repo must stay clean
+python screenshots/make_screenshots.py   # regenerate README screenshots
 ```
 
 Adding a rule: write a check in `fixmyslop/core/slop/rules_*.py` with the `@rule` decorator (or `line_rule` for a regex),

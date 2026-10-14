@@ -308,14 +308,16 @@ def print_slop_report(report, relpath, limit: int = 60, fixable_count: int = 0,
         console.print("[bold green]Clean.[/bold green] Nothing to fix.\n")
         return
     console.print("[bold]Next[/bold]")
+    steps = Table.grid(padding=(0, 3))
+    steps.add_column(style="cyan", no_wrap=True)
+    steps.add_column(style="dim")
     if fixable_count:
-        console.print(f"  [cyan]fixmyslop fix {target} --safe-only[/cyan]   "
-                      f"[dim]auto-fix {fixable_count} issue(s) that can't change behavior[/dim]")
-    agent_label = agent_hint or "your agent"
-    console.print(f"  [cyan]fixmyslop fix {target}[/cyan]               "
-                  f"[dim]safe fixes, then hand the rest to {agent_label} and re-scan[/dim]")
-    console.print(f"  [cyan]fixmyslop scan {target} -f prompt[/cyan]    "
-                  "[dim]print a fix brief to paste/pipe into any agent[/dim]")
+        steps.add_row(f"fixmyslop fix {target} --safe-only",
+                      f"auto-fix {fixable_count} issue(s) that can't change behavior")
+    steps.add_row(f"fixmyslop fix {target}",
+                  f"safe fixes, then {agent_hint or 'your agent'} fixes the rest")
+    steps.add_row(f"fixmyslop scan {target} --open", "interactive report with copy-to-agent prompts")
+    console.print(steps)
     console.print()
 
 
