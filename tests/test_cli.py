@@ -49,3 +49,10 @@ def test_gui_without_pyqt_names_the_extra(monkeypatch):
     result = runner.invoke(app, ["gui"])
     assert result.exit_code == 1
     assert "pip install fixmyslop[gui]" in result.stdout
+
+
+def test_generated_ci_workflow_pins_this_version(tmp_path):
+    """`init --github` must reference a real released tag, not a moving branch."""
+    runner.invoke(app, ["init", str(tmp_path), "--github"])
+    workflow = (tmp_path / ".github" / "workflows" / "fixmyslop.yml").read_text(encoding="utf-8")
+    assert f"MrSpideyNihal/FixMySlop@v{APP_VERSION}" in workflow

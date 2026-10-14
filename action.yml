@@ -1,9 +1,9 @@
-name: FixMySlop
-description: Catch AI slop in pull requests — UI tells, elided code, hallucinated packages, leaked secrets — with inline annotations.
+name: FixMySlop AI Slop Linter
+description: Catch AI slop in PRs - purple-gradient UI, elided code, hallucinated packages, leaked secrets. No LLM needed.
 author: Nihal Rodge
 branding:
   icon: check-circle
-  color: purple
+  color: gray-dark
 
 inputs:
   path:
