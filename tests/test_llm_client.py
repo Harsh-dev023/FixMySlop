@@ -1,8 +1,6 @@
 """Tests for core/llm_client.py."""
-import json
-import pytest
 from unittest.mock import MagicMock, patch
-from core.llm_client import LLMClient
+from fixmyslop.core.llm_client import LLMClient
 
 
 class TestLLMClient:
@@ -39,7 +37,7 @@ class TestLLMClient:
         result = client.parse_json_response("   ")
         assert result == []
 
-    @patch("core.llm_client.OpenAI")
+    @patch("fixmyslop.core.llm_client.OpenAI")
     def test_is_available_success(self, mock_openai_cls):
         """is_available should return True when backend responds."""
         mock_client = MagicMock()
@@ -49,7 +47,7 @@ class TestLLMClient:
         client = LLMClient()
         assert client.is_available() is True
 
-    @patch("core.llm_client.OpenAI")
+    @patch("fixmyslop.core.llm_client.OpenAI")
     def test_is_available_falls_back_to_available_model(self, mock_openai_cls):
         """is_available should switch to an installed model if configured one is missing."""
         mock_client = MagicMock()
@@ -60,7 +58,7 @@ class TestLLMClient:
         assert client.is_available() is True
         assert client.model == "qwen2.5-coder:3b"
 
-    @patch("core.llm_client.OpenAI")
+    @patch("fixmyslop.core.llm_client.OpenAI")
     def test_is_available_failure(self, mock_openai_cls):
         """is_available should return False when backend is unreachable."""
         mock_client = MagicMock()
@@ -70,7 +68,7 @@ class TestLLMClient:
         client = LLMClient()
         assert client.is_available() is False
 
-    @patch("core.llm_client.OpenAI")
+    @patch("fixmyslop.core.llm_client.OpenAI")
     def test_chat_retries_with_fallback_model_on_not_found(self, mock_openai_cls):
         """chat should retry once with a fallback model when backend says model not found."""
         mock_client = MagicMock()

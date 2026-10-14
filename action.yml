@@ -1,0 +1,62 @@
+name: FixMySlop
+description: Catch AI slop in pull requests — UI tells, elided code, hallucinated packages, leaked secrets — with inline annotations.
+author: Nihal Rodge
+branding:
+  icon: check-circle
+  color: purple
+
+inputs:
+  path:
+    description: Folder to scan
+    default: "."
+  fail-on:
+    description: Fail the job on issues at or above this severity (critical, high, medium, low, none)
+    default: high
+  changed-only:
+    description: Only scan files changed in the pull request
+    default: "false"
+  upload-sarif:
+    description: Upload results to GitHub code scanning (inline PR annotations; needs security-events write)
+    default: "true"
+
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Install FixMySlop
+      shell: bash
+      run: python -m pip install --quiet "${{ github.action_path }}[analysis]"
+
+    - name: Scan
+      id: scan
+      shell: bash
+      run: |
+        args=(scan "${{ inputs.path }}")
+        if [ "${{ inputs.changed-only }}" = "true" ]; then
+          base="${{ github.base_ref }}"
+          args+=(--changed)
+          if [ -n "$base" ]; then args+=(--base "origin/$base"); fi
+        fi
+        fixmyslop "${args[@]}" -f sarif -s fixmyslop.sarif --fail-on none
+        {
+          echo '### FixMySlop'
+          echo '```'
+          fixmyslop "${args[@]}" -f compact --fail-on none
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
+        echo "args=${args[*]}" >> "$GITHUB_OUTPUT"
+
+    - name: Upload SARIF
+      if: inputs.upload-sarif == 'true'
+      uses: github/codeql-action/upload-sarif@v3
+      continue-on-error: true
+      with:
+        sarif_file: fixmyslop.sarif
+        category: fixmyslop
+
+    - name: Gate
+      shell: bash
+      run: fixmyslop ${{ steps.scan.outputs.args }} -f compact --fail-on "${{ inputs.fail-on }}"

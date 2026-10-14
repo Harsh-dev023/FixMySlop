@@ -1,6 +1,5 @@
 """Tests for utils/config.py."""
-import yaml
-from utils.config import Config, DEFAULTS
+from fixmyslop.utils.config import Config, DEFAULTS
 
 
 class TestConfig:
@@ -8,10 +7,10 @@ class TestConfig:
 
     def test_defaults_loaded(self, tmp_path, monkeypatch):
         """Config should load with sane defaults when no file exists."""
-        monkeypatch.setattr("macros.CONFIG_DIR", tmp_path)
-        monkeypatch.setattr("macros.CONFIG_FILE", tmp_path / "config.yaml")
-        monkeypatch.setattr("utils.config.CONFIG_DIR", tmp_path)
-        monkeypatch.setattr("utils.config.CONFIG_FILE", tmp_path / "config.yaml")
+        monkeypatch.setattr("fixmyslop.macros.CONFIG_DIR", tmp_path)
+        monkeypatch.setattr("fixmyslop.macros.CONFIG_FILE", tmp_path / "config.yaml")
+        monkeypatch.setattr("fixmyslop.utils.config.CONFIG_DIR", tmp_path)
+        monkeypatch.setattr("fixmyslop.utils.config.CONFIG_FILE", tmp_path / "config.yaml")
 
         config = Config()
         assert config.model == DEFAULTS["model"]
@@ -21,10 +20,10 @@ class TestConfig:
     def test_save_and_reload(self, tmp_path, monkeypatch):
         """Config should persist and reload correctly."""
         config_file = tmp_path / "config.yaml"
-        monkeypatch.setattr("macros.CONFIG_DIR", tmp_path)
-        monkeypatch.setattr("macros.CONFIG_FILE", config_file)
-        monkeypatch.setattr("utils.config.CONFIG_DIR", tmp_path)
-        monkeypatch.setattr("utils.config.CONFIG_FILE", config_file)
+        monkeypatch.setattr("fixmyslop.macros.CONFIG_DIR", tmp_path)
+        monkeypatch.setattr("fixmyslop.macros.CONFIG_FILE", config_file)
+        monkeypatch.setattr("fixmyslop.utils.config.CONFIG_DIR", tmp_path)
+        monkeypatch.setattr("fixmyslop.utils.config.CONFIG_FILE", config_file)
 
         config = Config()
         config.set("model", "custom-model:latest")
@@ -35,10 +34,10 @@ class TestConfig:
 
     def test_get_with_fallback(self, tmp_path, monkeypatch):
         """Config.get should return fallback for missing keys."""
-        monkeypatch.setattr("macros.CONFIG_DIR", tmp_path)
-        monkeypatch.setattr("macros.CONFIG_FILE", tmp_path / "config.yaml")
-        monkeypatch.setattr("utils.config.CONFIG_DIR", tmp_path)
-        monkeypatch.setattr("utils.config.CONFIG_FILE", tmp_path / "config.yaml")
+        monkeypatch.setattr("fixmyslop.macros.CONFIG_DIR", tmp_path)
+        monkeypatch.setattr("fixmyslop.macros.CONFIG_FILE", tmp_path / "config.yaml")
+        monkeypatch.setattr("fixmyslop.utils.config.CONFIG_DIR", tmp_path)
+        monkeypatch.setattr("fixmyslop.utils.config.CONFIG_FILE", tmp_path / "config.yaml")
 
         config = Config()
         assert config.get("nonexistent_key", "fallback") == "fallback"

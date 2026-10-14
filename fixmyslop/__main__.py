@@ -1,12 +1,5 @@
-"""Package entry point for the fixmyslop console script."""
-
-
-def main():
-    """Forward to the root main.py entrypoint."""
-    from main import main as root_main
-
-    root_main()
-
+"""`python -m fixmyslop` and the `fixmyslop` console script."""
+from fixmyslop.main import main
 
 if __name__ == "__main__":
     main()

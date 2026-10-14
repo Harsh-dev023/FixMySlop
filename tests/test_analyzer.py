@@ -1,8 +1,7 @@
 """Tests for core/analyzer.py."""
 from pathlib import Path
-from unittest.mock import MagicMock
-from core.analyzer import Analyzer
-from core.issue import Issue
+from fixmyslop.core.analyzer import Analyzer
+from fixmyslop.core.issue import Issue
 
 
 class TestAnalyzer:
