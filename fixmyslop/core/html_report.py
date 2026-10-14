@@ -9,6 +9,7 @@ import html
 import json
 from collections import Counter, defaultdict
 from datetime import datetime
+from pathlib import Path
 from typing import Callable
 
 from fixmyslop.core.issue import ScanReport
@@ -56,7 +57,8 @@ def render_html(report: ScanReport, relpath: Callable[[str], str]) -> str:
     }
     payload = json.dumps(data, ensure_ascii=False).replace("</", "<\\/")
     esc = html.escape
-    meta = (f"{esc(report.repo_path)} · {report.scanned_files} files · {report.lines_scanned:,} lines · "
+    project = Path(report.repo_path).name or report.repo_path   # never leak the local user path
+    meta = (f"{esc(project)} · {report.scanned_files} files · {report.lines_scanned:,} lines · "
             f"{report.scan_time_s:.2f}s · {datetime.now().strftime('%Y-%m-%d %H:%M')}")
     return (_TEMPLATE
             .replace("__TITLE__", f"{APP_NAME} report")
