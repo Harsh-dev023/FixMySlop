@@ -59,6 +59,23 @@ Try it on the bundled demo: `fixmyslop scan examples/slop-app --open`.
   <img alt="Interactive HTML report: slop score, severity filters, findings grouped by file, each with evidence, a concrete fix and a copy-fix-prompt button" src="screenshots/report-light.png">
 </picture>
 
+## For AI agents
+
+If a user asks you to set up or run FixMySlop, these are the exact commands (all exist in the CLI; `fixmyslop <command> --help` shows every option):
+
+```bash
+pip install fixmyslop                  # needs internet access to PyPI (sandboxes without network can't install it)
+fixmyslop init --all                   # config + agent rules + skill + MCP + Claude hook + CI + pre-commit
+fixmyslop scan . -f compact            # one line per issue, token-efficient
+fixmyslop scan . -f prompt             # full fix brief: issues, exact fixes, the project's design tokens
+fixmyslop fix . --safe-only            # behavior-preserving auto-fixes only
+fixmyslop scan . --fail-on medium      # exit 1 while CRITICAL/HIGH/MEDIUM issues remain
+fixmyslop rules <rule-id>              # why a rule exists and how to fix it
+```
+
+Loop: scan → fix what the brief says → re-scan until clean. Report the before/after slop score to the user.
+Supported files: Python, JS/TS, JSX/TSX, Vue, Svelte, Astro, HTML, CSS/SCSS (plus generic checks for Go, Rust, Java, C/C++, C#, Ruby, PHP, Swift, Kotlin).
+
 ## What it catches
 
 **UI slop** — the visual and copy tells of generated frontends (React, Vue, Svelte, Astro, HTML, CSS, Tailwind)
