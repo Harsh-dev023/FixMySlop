@@ -49,8 +49,11 @@ If `fixmyslop` isn't installed: `pipx install fixmyslop` (or `uvx fixmyslop scan
 
 - Use the project's existing tokens. One accent color plus neutrals.
 - No purple→pink gradients, gradient text, glassmorphism stacks, blurred blobs, or hover:scale everywhere.
+- No glowing orbs or colored glows in any hue, pulsing dots, two-tone headlines, or eyebrow labels on every section.
+- Charts only from real data; otherwise an empty state.
 - Icons from the installed icon library, never emoji.
-- Plain, specific copy. Never invent stats, ratings, logos, or testimonials — ask the user.
+- Plain, specific copy — no hype ("revolutionize") and no aphorisms ("make space for what matters",
+  "intentional by design"). Never invent stats, ratings, logos, or testimonials — ask the user.
 - `<button>` not clickable `<div>`; alt text; aria-label on icon buttons; visible focus styles.
 """
 

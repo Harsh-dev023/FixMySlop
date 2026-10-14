@@ -52,7 +52,8 @@ fixmyslop fix                     # safe fixes → hand the rest to your agent �
 fixmyslop init --claude           # make Claude Code check its own work, live
 ```
 
-Try it on the bundled demo: `fixmyslop scan examples/slop-app --open`.
+Try it on the bundled demos: `fixmyslop scan examples/slop-app --open` (classic purple-gradient slop) and
+`fixmyslop scan examples/slop-2026` (the newer dark, glowing, aphorism-heavy look).
 
 <picture>
   <source media="(prefers-color-scheme: dark)" srcset="screenshots/report-dark.png">
@@ -91,6 +92,9 @@ Supported files: Python, JS/TS, JSX/TSX, Vue, Svelte, Astro, HTML, CSS/SCSS (plu
 | `ui/glassmorphism`, `ui/blur-blobs`, `ui/hover-scale`, `ui/heavy-shadows`, `ui/gimmick-animation` | the template aesthetic |
 | `ui/rainbow-palette`, `ui/palette-sprawl`, `ui/arbitrary-color`, `ui/arbitrary-values` | no design system: 9 accent hues, 40 hex codes, `w-[347px]` |
 | `ui/default-font`, `ui/z-index-war`, `ui/important-abuse` | Inter-everywhere, `z-index: 9999`, `!important` piles |
+| `ui/aphorism-copy` | the newer AI voice: "Make space for what matters", "Intentional by design", "Less X. More Y." |
+| `ui/neon-glow`, `ui/two-tone-headline`, `ui/eyebrow-labels` | glowing orbs in any hue, accent-colored second line, uppercase micro-labels on every section |
+| `ui/fake-chart` | sparklines drawn from hard-coded heights, often right next to a "0" |
 
 **Accessibility** — `a11y/img-alt`, `a11y/clickable-div`, `a11y/icon-button`, `a11y/focus-removed`, `a11y/dead-link`
 
@@ -167,7 +171,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - uses: MrSpideyNihal/FixMySlop@v0.3.3
+      - uses: MrSpideyNihal/FixMySlop@v0.4.0
         with: { fail-on: high, changed-only: true }
 ```
 
@@ -176,7 +180,7 @@ Findings show up as inline PR annotations (SARIF). Also on the [GitHub Marketpla
 ```yaml
 repos:
   - repo: https://github.com/MrSpideyNihal/FixMySlop
-    rev: v0.3.3
+    rev: v0.4.0
     hooks: [{ id: fixmyslop }]
 ```
 

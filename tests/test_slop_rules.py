@@ -252,3 +252,60 @@ def test_design_context_reads_project_tokens(tmp_path):
     context = ThemeIndex.build(tmp_path).design_context()
     assert "blue" in context and "bg-primary" in context
     assert "lucide-react" in context and "Geist" in context and "0.5rem" in context
+
+
+# ─── 2025–26 editorial dark-mode AI look (reported from a real FocusFlow extension) ─────
+
+def test_new_ai_look_fixture_is_caught():
+    """The FocusFlow-style demo graded A before these rules existed."""
+    from pathlib import Path
+    root = Path(__file__).parent.parent / "examples" / "slop-2026"
+    engine = SlopEngine(root)
+    issues = []
+    for path in sorted(root.iterdir()):
+        issues += engine.check_file(path, path.read_text(encoding="utf-8"))
+    issues += engine.finalize()
+    found = {i.rule_id for i in issues}
+    assert {"ui/aphorism-copy", "ui/fake-chart", "ui/neon-glow", "ui/gimmick-animation",
+            "ui/eyebrow-labels", "ui/two-tone-headline"} <= found
+
+
+@pytest.mark.parametrize("rule_id, name, sloppy, clean", [
+    ("ui/two-tone-headline", "Hero.tsx",
+     '<h1 className="text-5xl">Make space for <span className="text-emerald-300">what matters.</span></h1>',
+     '<h1 className="text-5xl">Block distracting sites during focus hours</h1>'),
+    ("ui/fake-chart", "Card.tsx",
+     "const sparkData = [12, 18, 9, 24, 30, 22, 28];",
+     "const sparkData = usage.map((d) => d.minutes);"),
+    ("ui/gimmick-animation", "dot.css",
+     ".status-dot { animation: pulse 2s ease-in-out infinite; }",
+     ".spinner { animation: spin 1s linear infinite; }"),
+])
+def test_new_ai_look_rules(tmp_path, rule_id, name, sloppy, clean):
+    assert rule_id in scan(tmp_path / "bad", name, sloppy)
+    assert rule_id not in scan(tmp_path / "good", name, clean)
+
+
+def test_aphorism_copy_needs_repetition(tmp_path):
+    one = "<p>Your data stays yours.</p>\n"
+    assert "ui/aphorism-copy" not in scan(tmp_path / "a", "A.tsx", one)
+    assert "ui/aphorism-copy" in scan(tmp_path / "b", "A.tsx", one + "<p>Less noise. More focus.</p>\n")
+
+
+def test_eyebrow_labels_only_when_overused(tmp_path):
+    label = '<p className="text-xs uppercase tracking-widest">Section</p>\n'
+    assert "ui/eyebrow-labels" not in scan(tmp_path / "a", "A.tsx", label * 2)
+    assert "ui/eyebrow-labels" in scan(tmp_path / "b", "A.tsx", label * 5)
+
+
+def test_eyebrow_class_defined_in_css(tmp_path):
+    css = {"styles.css": ".kicker { font-size: 11px; text-transform: uppercase; letter-spacing: .2em; }"}
+    html = '<p class="kicker">One</p>\n' * 4
+    assert "ui/eyebrow-labels" in scan(tmp_path, "index.html", html, extra=css)
+
+
+def test_colored_radial_glow_any_hue(tmp_path):
+    glow = '.orb { background: radial-gradient(circle, rgba(134, 239, 172, 0.35), transparent 70%); }\n'
+    assert "ui/neon-glow" in scan(tmp_path / "a", "a.css", glow * 2)
+    mask = '.fade { mask-image: radial-gradient(circle, #000 50%, transparent 80%); }\n'
+    assert "ui/neon-glow" not in scan(tmp_path / "b", "a.css", mask * 2)
