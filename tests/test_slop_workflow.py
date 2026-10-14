@@ -5,12 +5,12 @@ from pathlib import Path
 
 from typer.testing import CliRunner
 
-from cli.cli_app import app, run_scan
-from core.mcp_server import serve
-from core.report_builder import ReportBuilder
-from core.slop.brief import build_fix_brief, upsert_guide, GUIDE_START
-from core.slop.engine import SlopEngine, slop_score, grade
-from core.slop.fixers import apply_safe_fixes
+from fixmyslop.cli.cli_app import app, run_scan
+from fixmyslop.core.mcp_server import serve
+from fixmyslop.core.report_builder import ReportBuilder
+from fixmyslop.core.slop.brief import build_fix_brief, upsert_guide, GUIDE_START
+from fixmyslop.core.slop.engine import SlopEngine, slop_score, grade
+from fixmyslop.core.slop.fixers import apply_safe_fixes
 
 runner = CliRunner()
 

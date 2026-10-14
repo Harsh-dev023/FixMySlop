@@ -38,19 +38,18 @@ analysis = ["ruff>=0.4.0", "bandit>=1.7.0"]
 dev = ["pytest>=8.0.0"]
 
 [project.scripts]
-fixmyslop = "fixmyslop.__main__:main"
+fixmyslop = "fixmyslop.main:main"
 
 [project.urls]
 Homepage = "https://github.com/MrSpideyNihal/FixMySlop"
 Repository = "https://github.com/MrSpideyNihal/FixMySlop"
 
-[tool.setuptools]
-py-modules = ["main", "macros"]
-
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["fixmyslop*", "cli*", "core*", "ui*", "utils*"]
-exclude = ["tests*"]
+include = ["fixmyslop*"]
+
+[tool.setuptools.package-data]
+fixmyslop = ["ui/assets/styles/*.qss"]
 
 [tool.ruff]
 line-length = 100

@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 
-from core.slop.engine import SlopEngine
+from fixmyslop.core.slop.engine import SlopEngine
 
 
 def scan(tmp_path: Path, name: str, content: str, extra: dict | None = None) -> list:
@@ -243,7 +243,7 @@ def test_commented_out_code_is_not_narration(tmp_path):
 
 
 def test_design_context_reads_project_tokens(tmp_path):
-    from core.slop.theme import ThemeIndex
+    from fixmyslop.core.slop.theme import ThemeIndex
     (tmp_path / "components.json").write_text("{}", encoding="utf-8")
     (tmp_path / "package.json").write_text('{"dependencies": {"lucide-react": "1"}}', encoding="utf-8")
     (tmp_path / "index.css").write_text(

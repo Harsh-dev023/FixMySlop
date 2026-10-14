@@ -1,6 +1,6 @@
 """Tests for core/scanner.py."""
 from pathlib import Path
-from core.scanner import Scanner
+from fixmyslop.core.scanner import Scanner
 
 
 class TestScanner:

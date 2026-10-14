@@ -212,7 +212,7 @@ pytest -q
 fixmyslop scan . --fail-on medium     # the repo must stay clean
 ```
 
-Adding a rule: write a check in `core/slop/rules_*.py` with the `@rule` decorator (or `line_rule` for a regex),
+Adding a rule: write a check in `fixmyslop/core/slop/rules_*.py` with the `@rule` decorator (or `line_rule` for a regex),
 then add a sloppy + clean pair to `tests/test_slop_rules.py`. Every rule needs a `why` and an actionable `fix` —
 the fix text is what agents follow.
 

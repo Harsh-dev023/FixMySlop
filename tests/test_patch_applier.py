@@ -1,5 +1,5 @@
 """Tests for core/patch_applier.py."""
-from core.patch_applier import PatchApplier
+from fixmyslop.core.patch_applier import PatchApplier
 
 
 class TestPatchApplier:

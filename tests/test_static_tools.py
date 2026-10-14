@@ -1,5 +1,5 @@
 """Tests for core/static_tools.py."""
-from core.static_tools import StaticToolRunner
+from fixmyslop.core.static_tools import StaticToolRunner
 
 
 class TestStaticToolRunner:

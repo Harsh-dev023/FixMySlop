@@ -1,7 +1,7 @@
 """Tests for core/fix_engine.py."""
-from core.fix_engine import FixEngine
-from core.issue import Issue
-from macros import SEVERITY_HIGH
+from fixmyslop.core.fix_engine import FixEngine
+from fixmyslop.core.issue import Issue
+from fixmyslop.macros import SEVERITY_HIGH
 
 
 class TestFixEngine:
