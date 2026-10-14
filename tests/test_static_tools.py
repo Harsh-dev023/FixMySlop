@@ -39,3 +39,20 @@ class TestStaticToolRunner:
         versions = runner.get_tool_versions()
         assert isinstance(versions, dict)
         assert "ruff" in versions
+
+
+def test_ruff_severity_does_not_confuse_prefixes():
+    """SIM (simplify) is not S (security); BLE is not B (bugbear)."""
+    assert StaticToolRunner._ruff_severity("SIM103") == "LOW"
+    assert StaticToolRunner._ruff_severity("BLE001") == "LOW"
+    assert StaticToolRunner._ruff_severity("S608") == "HIGH"
+    assert StaticToolRunner._ruff_severity("B904") == "MEDIUM"
+
+
+def test_ruff_rules_pinned_unless_project_selects(tmp_path):
+    """Results must not depend on ruff's ever-changing default rule set."""
+    from fixmyslop.core.static_tools import project_selects_ruff_rules
+    (tmp_path / "pyproject.toml").write_text("[tool.ruff]\nline-length = 100\n", encoding="utf-8")
+    assert not project_selects_ruff_rules(tmp_path)
+    (tmp_path / "ruff.toml").write_text('[lint]\nselect = ["ALL"]\n', encoding="utf-8")
+    assert project_selects_ruff_rules(tmp_path)

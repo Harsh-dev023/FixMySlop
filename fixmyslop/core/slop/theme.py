@@ -137,7 +137,7 @@ def _oklch_hue_to_hsl_hue(h: float) -> float:
     table = [(0, 340), (30, 10), (60, 30), (90, 50), (130, 90), (150, 130), (195, 180), (230, 200),
              (255, 222), (265, 240), (280, 258), (292, 270), (305, 285), (320, 300), (345, 320), (360, 340)]
     h %= 360
-    for (a, ha), (b, hb) in zip(table, table[1:]):
+    for (a, ha), (b, hb) in zip(table, table[1:], strict=False):
         if a <= h <= b:
             return (ha + (hb - ha) * (h - a) / (b - a)) % 360
     return h

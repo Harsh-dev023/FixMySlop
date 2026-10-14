@@ -288,7 +288,7 @@ HEX_COLOR = re.compile(r"#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})\b")
 )
 def check_img_alt(ctx: FileContext) -> Iterable[Hit]:
     """Flag <img>/<Image> without an alt attribute."""
-    for name, attrs, start, _ in iter_tags(ctx, ("img", "Image")):
+    for _name, attrs, start, _ in iter_tags(ctx, ("img", "Image")):
         if re.search(r"(?:^|\s|:)alt\s*=|\{\s*\.\.\.", attrs):
             continue
         line = ctx.line_of(start)
@@ -370,7 +370,7 @@ def _strip_tags(markup: str) -> str:
 )
 def check_dead_link(ctx: FileContext) -> Iterable[Hit]:
     """Flag anchors with placeholder hrefs."""
-    for name, attrs, start, _ in iter_tags(ctx, ("a", "Link")):
+    for _name, attrs, start, _ in iter_tags(ctx, ("a", "Link")):
         if re.search(r"\bhref\s*=\s*(?:\{\s*)?[\"'](?:#|javascript:[^\"']*|)[\"']", attrs):
             line = ctx.line_of(start)
             yield Hit(line, ctx.line_text(line).strip())

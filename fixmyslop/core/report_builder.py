@@ -198,7 +198,7 @@ class ReportBuilder:
         pdf.set_font("Helvetica", "B", 9)
         col_w = [22, 55, 22, 30, 60]
         headers = ["Severity", "File", "Lines", "Category", "Title"]
-        for w, h in zip(col_w, headers):
+        for w, h in zip(col_w, headers, strict=True):
             pdf.cell(w, 8, _pdf_safe_text(h), border=1)
         pdf.ln()
 

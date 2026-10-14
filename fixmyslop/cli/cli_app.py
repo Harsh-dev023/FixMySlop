@@ -240,7 +240,7 @@ def scan(
                                       min_severity=min_severity, show_progress=text_mode)
     except FileNotFoundError as e:
         print_error(str(e))
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
 
     def rel(path: str) -> str:
         return relative_path(report, path)
@@ -319,7 +319,7 @@ def fix(
         report, _ = do_scan()
     except FileNotFoundError as e:
         print_error(str(e))
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     root = Path(report.repo_path)
     before_score, before_count = report.slop_score, len(report.issues)
 
@@ -392,7 +392,7 @@ def fix(
                 code = agent_mod.run_agent(chosen, root, brief_path, custom_cmd=agent_cmd)
             except FileNotFoundError as e:
                 print_error(str(e))
-                raise typer.Exit(1)
+                raise typer.Exit(1) from None
             if code != 0:
                 print_warning(f"{name} exited with code {code}")
             report, _ = do_scan()
@@ -663,7 +663,7 @@ def gui():
         from fixmyslop.ui.app import launch
     except ImportError:
         print_error("PyQt5 not installed. Run: pip install fixmyslop[gui]")
-        raise typer.Exit(1)
+        raise typer.Exit(1) from None
     launch()
 
 

@@ -3,6 +3,7 @@ Static tools — subprocess wrappers for Ruff, Bandit, and Semgrep.
 Parses their JSON output into Issue objects for unified consumption.
 """
 import json
+import re
 import subprocess
 import shutil
 from pathlib import Path
@@ -20,6 +21,30 @@ logger = get_logger(__name__)
 
 _RUFF_HIGH = {"F821", "F822", "F823", "F632", "F702", "F704", "F706"}
 _RUFF_LOW = {"F401", "F841", "F811", "F541"}
+
+# Ruff's default rule set changes between releases (0.17 added SIM, UP, I, BLE…),
+# which made results depend on whatever ruff version is installed. Unless the
+# project picks its own rules, run a fixed set focused on real bugs.
+RUFF_DEFAULT_SELECT = "E4,E7,E9,F,B"
+RUFF_DEFAULT_IGNORE = "B008"   # function calls in defaults: idiomatic in FastAPI/Typer
+_RUFF_CONFIGS = ("ruff.toml", ".ruff.toml", "pyproject.toml")
+
+
+def project_selects_ruff_rules(start: Path) -> bool:
+    """True when the nearest ruff config (ruff.toml / [tool.ruff]) chooses its own rules."""
+    for folder in [start, *start.parents]:
+        for name in _RUFF_CONFIGS:
+            config = folder / name
+            if not config.is_file():
+                continue
+            try:
+                text = config.read_text(encoding="utf-8", errors="ignore")
+            except OSError:
+                continue
+            if name == "pyproject.toml" and "[tool.ruff" not in text:
+                continue
+            return bool(re.search(r"^\s*(extend-)?select\s*=", text, re.MULTILINE))
+    return False
 
 
 class StaticToolRunner:
@@ -92,12 +117,18 @@ class StaticToolRunner:
         """Run Ruff linter on one file and parse results into Issues."""
         return self._run_ruff_paths([file_path])
 
+    def _ruff_rule_args(self, paths: list[Path]) -> list[str]:
+        """Pinned rule selection, unless the project configures ruff rules itself."""
+        if not paths or project_selects_ruff_rules(Path(paths[0]).resolve().parent):
+            return []
+        return [f"--select={RUFF_DEFAULT_SELECT}", f"--extend-ignore={RUFF_DEFAULT_IGNORE}"]
+
     def _run_ruff_paths(self, paths: list[Path]) -> list[Issue]:
         """Run Ruff once over several files."""
         try:
             result = subprocess.run(
                 ["ruff", "check", "--output-format=json", "--no-fix", "--exit-zero",
-                 *[str(p) for p in paths]],
+                 *self._ruff_rule_args(paths), *[str(p) for p in paths]],
                 capture_output=True, text=True, timeout=120, encoding="utf-8", errors="replace",
             )
             if not result.stdout.strip():
@@ -112,7 +143,7 @@ class StaticToolRunner:
                     line_start=(item.get("location") or {}).get("row", 0),
                     line_end=(item.get("end_location") or {}).get("row", 0),
                     severity=self._ruff_severity(code),
-                    category=CATEGORY_SECURITY if code.startswith("S") else CATEGORY_MAINTAINABILITY,
+                    category=CATEGORY_SECURITY if re.match(r"S\d", code) else CATEGORY_MAINTAINABILITY,
                     rule_id=code,
                     title=item.get("message", "Ruff issue"),
                     description=item.get("message", ""),
@@ -207,13 +238,13 @@ class StaticToolRunner:
         Real bugs rank high; style and unused-name findings rank low so they
         don't drown out security issues in the slop score.
         """
-        if code.startswith("S") or code.startswith("E9") or code in _RUFF_HIGH:
-            return SEVERITY_HIGH  # security, undefined names, syntax errors
+        if re.match(r"S\d", code) or code.startswith("E9") or code in _RUFF_HIGH:
+            return SEVERITY_HIGH  # flake8-bandit security (S###, not SIM), undefined names, syntax errors
         if code in _RUFF_LOW:
             return SEVERITY_LOW  # unused imports/variables, empty f-strings
-        if code.startswith(("B", "F", "E7", "PLE")):
-            return SEVERITY_MEDIUM  # bugbear / pyflakes / statement errors
-        return SEVERITY_LOW
+        if re.match(r"(?:B|F|E7)\d|PLE\d", code):
+            return SEVERITY_MEDIUM  # bugbear (B###, not BLE) / pyflakes / statement errors
+        return SEVERITY_LOW  # style & modernisation: SIM, UP, I, BLE, RUF, PLW, …
 
     def get_tool_versions(self) -> dict[str, Optional[str]]:
         """Return version strings for all available tools."""
