@@ -25,6 +25,7 @@ if (
         pass  # stdout isn't a real stream (IDE, redirected) — keep it as is
 
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 from rich.panel import Panel
 from rich.text import Text
@@ -171,22 +172,22 @@ def print_issue(issue):
 
 def print_error(message: str):
     """Print an error message."""
-    console.print(f"[bold red]✗ Error:[/bold red] {message}")
+    console.print(f"[bold red]✗ Error:[/bold red] {escape(str(message))}")
 
 
 def print_success(message: str):
     """Print a success message."""
-    console.print(f"[bold green]✓[/bold green] {message}")
+    console.print(f"[bold green]✓[/bold green] {escape(str(message))}")
 
 
 def print_info(message: str):
     """Print an info message."""
-    console.print(f"[bold blue]ℹ[/bold blue] {message}")
+    console.print(f"[bold blue]ℹ[/bold blue] {escape(str(message))}")
 
 
 def print_warning(message: str):
     """Print a warning message."""
-    console.print(f"[bold yellow]⚠[/bold yellow] {message}")
+    console.print(f"[bold yellow]⚠[/bold yellow] {escape(str(message))}")
 
 
 def print_llm_warning(model: str, scan_mode: str = SCAN_MODE_TURBO):
@@ -262,7 +263,7 @@ def print_slop_report(report, relpath, limit: int = 60, fixable_count: int = 0,
     for path, issues in sorted(by_file.items(), key=file_rank):
         if limit and shown >= limit:
             break
-        console.print(f"\n[bold underline]{path}[/bold underline]")
+        console.print(f"\n[bold underline]{escape(path)}[/bold underline]")
         for issue in sorted(issues, key=lambda i: (i.line_start, SEVERITY_RANK.get(i.severity, 9))):
             if limit and shown >= limit:
                 break
@@ -312,11 +313,11 @@ def print_slop_report(report, relpath, limit: int = 60, fixable_count: int = 0,
     steps.add_column(style="cyan", no_wrap=True)
     steps.add_column(style="dim")
     if fixable_count:
-        steps.add_row(f"fixmyslop fix {target} --safe-only",
+        steps.add_row(escape(f"fixmyslop fix {target} --safe-only"),
                       f"auto-fix {fixable_count} issue(s) that can't change behavior")
-    steps.add_row(f"fixmyslop fix {target}",
+    steps.add_row(escape(f"fixmyslop fix {target}"),
                   f"safe fixes, then {agent_hint or 'your agent'} fixes the rest")
-    steps.add_row(f"fixmyslop scan {target} --open", "interactive report with copy-to-agent prompts")
+    steps.add_row(escape(f"fixmyslop scan {target} --open"), "interactive report with copy-to-agent prompts")
     console.print(steps)
     console.print()
 
