@@ -328,7 +328,11 @@ class UIApp:
         if path == "/api/rules":
             return rules_payload(self.state.root)
         if path == "/api/snippet":
-            return read_snippet(self._root(), query.get("file", ""), int(query.get("line") or 1))
+            # Issue paths are relative to the scan root, which is the enclosing git repo when the opened
+            # folder is a subfolder of one (monorepos) — resolve against that, not the opened folder.
+            payload = self.state.report_payload
+            base = Path(payload["project"]["root"]) if payload else self._root()
+            return read_snippet(base, query.get("file", ""), int(query.get("line") or 1))
         if path == "/api/brief":
             return {"text": self._brief(query.get("file") or None)}
         raise FileNotFoundError(path)

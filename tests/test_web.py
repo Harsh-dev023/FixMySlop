@@ -134,3 +134,20 @@ def test_baseline_from_the_app(server, project):
     assert json.loads(call(base + "/api/state", token=app.token)[1])["baseline"] is True
     _, body, _ = call(base + "/api/baseline", token=app.token, body={"clear": True})
     assert json.loads(body)["issues"] and not (project / ".fixmyslop-baseline.json").exists()
+
+
+def test_snippet_works_for_a_subfolder_of_a_git_repo(tmp_path):
+    """Monorepos: open apps/web inside a repo; issue paths are repo-relative, previews must still resolve."""
+    import subprocess
+    repo = tmp_path / "monorepo"
+    app_dir = repo / "apps" / "web"
+    app_dir.mkdir(parents=True)
+    (app_dir / "Hero.tsx").write_text(SLOP, encoding="utf-8")
+    subprocess.run(["git", "init", "-q"], cwd=repo, check=True)
+    subprocess.run(["git", "add", "-A"], cwd=repo, check=True)
+    ui = UIApp(app_dir)
+    report = ui.post("/api/scan", {"static": False})
+    issue = next(i for i in report["issues"] if i["rule"] == "ui/ai-gradient")
+    assert issue["file"] == "apps/web/Hero.tsx"
+    snippet = ui.get("/api/snippet", {"file": issue["file"], "line": str(issue["line"])})
+    assert any("from-purple-600" in line for line in snippet["lines"])
