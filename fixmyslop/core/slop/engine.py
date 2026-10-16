@@ -64,6 +64,7 @@ SEVERITY_WEIGHTS = {
     SEVERITY_CRITICAL: 10.0, SEVERITY_HIGH: 5.0, SEVERITY_MEDIUM: 2.0,
     SEVERITY_LOW: 0.75, SEVERITY_INFO: 0.1,
 }
+_TOKEN_DEFINITION = re.compile(r"--[\w-]+\s*:\s*#[0-9a-fA-F]{3,8}\b")
 _IGNORE_RE = re.compile(re.escape(IGNORE_MARKER) + r"(?:\[([^\]]*)\])?")
 
 
@@ -196,7 +197,9 @@ class SlopEngine:
                 continue
             for family in rules_ui.TW_COLOR_FAMILY.findall(line):
                 self._color_families.setdefault(family, (str(ctx.path), n))
-            for hex_color in rules_ui.HEX_COLOR.findall(line):
+            # Colors defined as design tokens (--name: #hex) ARE the design system, not sprawl.
+            raw = _TOKEN_DEFINITION.sub("", line)
+            for hex_color in rules_ui.HEX_COLOR.findall(raw):
                 self._hex_by_file[str(ctx.path)].add(_normalize_hex(hex_color))
             if ctx.has(KIND_MARKUP):
                 for match in rules_ui.ARBITRARY_SIZE.finditer(line):

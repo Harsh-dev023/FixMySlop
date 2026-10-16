@@ -39,26 +39,22 @@ npx fixmyslop scan                # JavaScript projects: no install step (runs v
 `npx` needs Python 3.10+ plus [uv](https://docs.astral.sh/uv/) or pipx on the machine; it always runs the
 FixMySlop version that matches the npm package.
 
-Optional: `pip install "fixmyslop[analysis]"` adds Ruff + Bandit findings for Python, `"fixmyslop[gui]"` adds the desktop app.
+Optional: `pip install "fixmyslop[analysis]"` adds Ruff + Bandit findings for Python.
 
 ## 30 seconds
 
 ```bash
 fixmyslop scan                    # whole repo
 fixmyslop scan --changed          # only what changed vs main (+ uncommitted)
-fixmyslop scan --open             # interactive HTML report with copy-to-agent fix prompts
+fixmyslop ui                      # the app: browse issues, apply fixes, copy prompts for your agent
+fixmyslop scan --open             # one-off interactive HTML report
 fixmyslop fix --safe-only         # behavior-preserving auto-fixes
 fixmyslop fix                     # safe fixes → hand the rest to your agent → re-scan
 fixmyslop init --claude           # make Claude Code check its own work, live
 ```
 
-Try it on the bundled demos: `fixmyslop scan examples/slop-app --open` (classic purple-gradient slop) and
+Try it on the bundled demos: `fixmyslop ui examples/slop-app` (classic purple-gradient slop) and
 `fixmyslop scan examples/slop-2026` (the newer dark, glowing, aphorism-heavy look).
-
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="screenshots/report-dark.png">
-  <img alt="Interactive HTML report: slop score, severity filters, findings grouped by file, each with evidence, a concrete fix and a copy-fix-prompt button" src="screenshots/report-light.png">
-</picture>
 
 ## For AI agents
 
@@ -76,6 +72,26 @@ fixmyslop rules <rule-id>              # why a rule exists and how to fix it
 
 Loop: scan → fix what the brief says → re-scan until clean. Report the before/after slop score to the user.
 Supported files: Python, JS/TS, JSX/TSX, Vue, Svelte, Astro, HTML, CSS/SCSS (plus generic checks for Go, Rust, Java, C/C++, C#, Ruby, PHP, Swift, Kotlin).
+
+## The app
+
+`fixmyslop ui` opens FixMySlop in your browser. It runs only on your machine (127.0.0.1, per-session token,
+no external requests) and uses the same engine as the CLI:
+
+- **Overview**: slop score with the change since your last scan, what to fix first, and three steps to fix it
+- **Issues**: filter and search every finding, see the exact code, and copy a fix prompt for your agent
+- **Rules**: turn rules on or off for the project (saved to `.fixmyslop.yml`)
+- **Setup**: one-click install for Claude Code, Cursor, AGENTS.md, GitHub Actions and pre-commit
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="screenshots/app-overview-dark.png">
+  <img alt="FixMySlop app overview: slop score 100, grade F, three fix steps, issues by category and the most affected files" src="screenshots/app-overview-light.png">
+</picture>
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="screenshots/app-issues-dark.png">
+  <img alt="FixMySlop issues view: findings grouped by file, with the explanation, highlighted code and the exact fix for the selected issue" src="screenshots/app-issues-light.png">
+</picture>
 
 ## What it catches
 
@@ -171,7 +187,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - uses: MrSpideyNihal/FixMySlop@v0.4.0
+      - uses: MrSpideyNihal/FixMySlop@v0.5.0
         with: { fail-on: high, changed-only: true }
 ```
 
@@ -180,7 +196,7 @@ Findings show up as inline PR annotations (SARIF). Also on the [GitHub Marketpla
 ```yaml
 repos:
   - repo: https://github.com/MrSpideyNihal/FixMySlop
-    rev: v0.4.0
+    rev: v0.5.0
     hooks: [{ id: fixmyslop }]
 ```
 
@@ -202,7 +218,7 @@ Skip a file: `fixmyslop-ignore-file` in its first lines. Paths passed explicitly
 ## Output formats
 
 `-f text` (default) · `compact` (one line per issue, for agents) · `prompt` (fix brief) · `sarif` · `json` ·
-`markdown` · `html` (interactive: filters, search, "copy fix prompt" per file) · `csv` · `pdf`. Save with `-s report.html` (format inferred from the extension).
+`markdown` · `html` (a shareable single file with filters, search and "copy fix prompt" per file) · `csv` · `pdf`. Save with `-s report.html` (format inferred from the extension).
 Exit codes: `0` clean, `1` issues at/above `--fail-on`, `2` usage error.
 
 ## Slop score
@@ -210,16 +226,11 @@ Exit codes: `0` clean, `1` issues at/above `--fail-on`, `2` usage error.
 0 (clean) to 100, from severity-weighted findings per 1,000 lines, so a 500-line app and a 500k-line monorepo
 are comparable. Grades: A < 10 ≤ B < 25 ≤ C < 45 ≤ D < 65 ≤ F. FixMySlop's own repo is scanned in CI and holds an A.
 
-## Optional: LLM review and the desktop app
+## Optional: LLM review
 
 `fixmyslop scan --llm` adds a model review pass over each file (Ollama, llama.cpp, vLLM, LM Studio, or any
 OpenAI-compatible endpoint via `--base-url`/`--api-key`/`--model`, or `FIXMYSLOP_*` env vars). It's slow and
-non-deterministic, so it's off by default.
-
-`fixmyslop gui` (needs `fixmyslop[gui]`) opens the desktop app: scan, browse findings by file, export reports.
-For most people `fixmyslop scan --open` is the faster way to browse results.
-
-![Desktop app report view](screenshots/gui.png)
+non-deterministic, so it's off by default — every check above works without it.
 
 ## Development
 

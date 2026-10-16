@@ -309,3 +309,17 @@ def test_colored_radial_glow_any_hue(tmp_path):
     assert "ui/neon-glow" in scan(tmp_path / "a", "a.css", glow * 2)
     mask = '.fade { mask-image: radial-gradient(circle, #000 50%, transparent 80%); }\n'
     assert "ui/neon-glow" not in scan(tmp_path / "b", "a.css", mask * 2)
+
+
+def test_icon_button_accepts_non_english_labels(tmp_path):
+    """A button with a visible label in any language is not icon-only (found on a Russian-language app)."""
+    code = "<button onClick={signOut}>\n  <LogOut className=\"h-4 w-4\" />\n  <span>Выйти</span>\n</button>\n"
+    assert "a11y/icon-button" not in scan(tmp_path, "Shell.tsx", code)
+
+
+def test_design_tokens_are_not_palette_sprawl(tmp_path):
+    """Hex colors defined as CSS variables are the design system; only raw usage counts as sprawl."""
+    tokens = "".join(f"  --c{n}: #{n:02x}{n:02x}{n:02x};\n" for n in range(40))
+    assert "ui/palette-sprawl" not in scan(tmp_path / "a", "theme.css", ":root {\n" + tokens + "}\n")
+    raw = "".join(f".c{n} {{ color: #{n:02x}{n:02x}{n:02x}; }}\n" for n in range(40))
+    assert "ui/palette-sprawl" in scan(tmp_path / "b", "theme.css", raw)

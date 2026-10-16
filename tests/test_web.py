@@ -1,0 +1,126 @@
+"""Tests for the local web app (`fixmyslop ui`): API behaviour and the HTTP security model."""
+import json
+import threading
+import urllib.error
+import urllib.request
+from http.server import ThreadingHTTPServer
+from pathlib import Path
+
+import pytest
+
+from fixmyslop.web.server import UIApp, _Handler
+
+SLOP = '<div className="bg-gradient-to-r from-purple-600 to-pink-500">\n  <a href="#">x</a>\n</div>\n'
+
+
+@pytest.fixture()
+def project(tmp_path):
+    (tmp_path / "package.json").write_text('{"dependencies": {"react": "18"}}', encoding="utf-8")
+    (tmp_path / "Hero.tsx").write_text(SLOP, encoding="utf-8")
+    (tmp_path / "util.py").write_text("# Initialize the items list\nitems = []\n", encoding="utf-8")
+    return tmp_path
+
+
+@pytest.fixture()
+def server(project):
+    app = UIApp(project)
+    handler = type("Handler", (_Handler,), {"app": app})
+    httpd = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    thread = threading.Thread(target=httpd.serve_forever, daemon=True)
+    thread.start()
+    yield app, f"http://127.0.0.1:{httpd.server_address[1]}"
+    httpd.shutdown()
+    httpd.server_close()
+
+
+def call(url, token=None, body=None, host=None):
+    headers = {"Content-Type": "application/json"}
+    if token:
+        headers["X-FixMySlop-Token"] = token
+    if host:
+        headers["Host"] = host
+    req = urllib.request.Request(url, data=json.dumps(body).encode() if body is not None else None, headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=60) as res:
+            return res.status, res.read().decode("utf-8"), dict(res.headers)
+    except urllib.error.HTTPError as e:
+        return e.code, e.read().decode("utf-8"), dict(e.headers)
+
+
+def test_page_embeds_token_and_strict_headers(server):
+    app, base = server
+    status, body, headers = call(base + "/")
+    assert status == 200 and app.token in body
+    assert "default-src 'none'" in headers["Content-Security-Policy"]
+    assert headers["X-Frame-Options"] == "DENY"
+    assert "https://" not in body.replace("https://github.com/MrSpideyNihal/FixMySlop", "")  # no CDNs
+
+
+def test_api_requires_token(server):
+    _, base = server
+    assert call(base + "/api/state")[0] == 403
+    assert call(base + "/api/scan", body={})[0] == 403
+
+
+def test_rejects_foreign_host_header(server):
+    """DNS-rebinding protection: a page on evil.example resolving to 127.0.0.1 must be refused."""
+    app, base = server
+    assert call(base + "/", host="evil.example")[0] == 403
+    assert call(base + "/api/state", token=app.token, host="evil.example")[0] == 403
+
+
+def test_scan_fix_and_brief_flow(server, project):
+    app, base = server
+    status, body, _ = call(base + "/api/scan", token=app.token, body={"static": False})
+    report = json.loads(body)
+    assert status == 200 and report["grade"] in "ABCDF"
+    rules = {i["rule"] for i in report["issues"]}
+    assert {"ui/ai-gradient", "a11y/dead-link", "slop/narrating-comment"} <= rules
+    assert all(not Path(i["file"]).is_absolute() for i in report["issues"])
+
+    _, body, _ = call(base + "/api/brief?file=Hero.tsx", token=app.token)
+    assert "Hero.tsx" in json.loads(body)["text"] and "util.py" not in json.loads(body)["text"]
+
+    _, body, _ = call(base + "/api/fix-safe", token=app.token, body={})
+    result = json.loads(body)
+    assert result["applied"] == 1
+    assert "Initialize" not in (project / "util.py").read_text(encoding="utf-8")
+    assert result["report"]["previous"] is not None          # history drives the score delta
+
+
+def test_snippet_is_confined_to_project(server):
+    app, base = server
+    status, body, _ = call(base + "/api/snippet?file=Hero.tsx&line=2", token=app.token)
+    assert status == 200 and any("href" in line for line in json.loads(body)["lines"])
+    assert call(base + "/api/snippet?file=../../etc/passwd&line=1", token=app.token)[0] == 400
+
+
+def test_rule_toggle_writes_project_config(server, project):
+    app, base = server
+    call(base + "/api/rule", token=app.token, body={"id": "ui/ai-gradient", "enabled": False})
+    assert "ui/ai-gradient" in (project / ".fixmyslop.yml").read_text(encoding="utf-8")
+    _, body, _ = call(base + "/api/scan", token=app.token, body={"static": False})
+    assert "ui/ai-gradient" not in {i["rule"] for i in json.loads(body)["issues"]}
+    call(base + "/api/rule", token=app.token, body={"id": "ui/ai-gradient", "enabled": True})
+    _, body, _ = call(base + "/api/rules", token=app.token)
+    assert next(r for r in json.loads(body)["rules"] if r["id"] == "ui/ai-gradient")["enabled"] is True
+
+
+def test_install_integration_and_status(server, project):
+    app, base = server
+    _, body, _ = call(base + "/api/integration", token=app.token, body={"id": "claude"})
+    status = {i["id"]: i["installed"] for i in json.loads(body)["integrations"]}
+    assert status["claude"] is True and status["cursor"] is False
+    assert (project / ".claude" / "skills" / "fixmyslop" / "SKILL.md").exists()
+
+
+def test_switch_project_validates_path(server, tmp_path):
+    app, base = server
+    assert call(base + "/api/project", token=app.token, body={"path": str(tmp_path / "nope")})[0] == 400
+
+
+def test_snippet_redacts_secrets(server, project):
+    app, base = server
+    (project / "config.py").write_text('KEY = "sk-proj-abcdefghijklmnopqrstuvwxyz123456"\n', encoding="utf-8")
+    _, body, _ = call(base + "/api/snippet?file=config.py&line=1", token=app.token)
+    assert "abcdefghijklmnop" not in body and "redacted" in body

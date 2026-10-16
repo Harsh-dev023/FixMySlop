@@ -349,7 +349,7 @@ def check_icon_button(ctx: FileContext) -> Iterable[Hit]:
         if "<" not in inner:
             continue
         stripped = _strip_tags(inner)
-        if "{" in stripped or re.search(r"[A-Za-z0-9]", stripped.replace("&nbsp;", "")):
+        if "{" in stripped or re.search(r"[^\W_]", stripped.replace("&nbsp;", "")):  # any letter/digit, any script
             continue
         line = ctx.line_of(start)
         yield Hit(line, ctx.line_text(line).strip())
