@@ -3,6 +3,9 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); while in 0.x, minor versions may
 include breaking changes.
 
+## 0.6.1
+- `fixmyslop ui`: code previews failed when the opened folder is a subfolder of a git repo (monorepos).
+
 ## 0.6.0
 
 **Adopt it on an existing codebase**
