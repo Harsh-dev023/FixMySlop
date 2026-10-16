@@ -7,7 +7,7 @@ from pathlib import Path
 
 # ─── App Identity ───────────────────────────────────────────────────────────
 APP_NAME = "FixMySlop"
-APP_VERSION = "0.4.0"
+APP_VERSION = "0.5.0"
 APP_DESCRIPTION = "The slop linter for the AI-agent era. Catch it, then let your agent fix it."
 APP_AUTHOR = "Nihal Rodge"
 APP_LICENSE = "MIT"
@@ -77,7 +77,7 @@ CATEGORY_DEBT = "Technical Debt"
 CATEGORY_PERFORMANCE = "Performance"
 CATEGORY_MAINTAINABILITY = "Maintainability"
 CATEGORY_TESTING = "Missing Tests"
-CATEGORY_AI_SMELL = "AI Smell"
+CATEGORY_AI_SMELL = "Code Slop"
 CATEGORY_UI_SLOP = "UI Slop"
 CATEGORY_A11Y = "Accessibility"
 CATEGORY_DEPS = "Dependencies"

@@ -658,14 +658,27 @@ def models(
 
 
 @app.command()
-def gui():
-    """Launch the desktop GUI (needs `pip install fixmyslop[gui]`)."""
-    try:
-        from fixmyslop.ui.app import launch
-    except ImportError:
-        print_error("PyQt5 not installed. Run: pip install fixmyslop[gui]")
-        raise typer.Exit(1) from None
-    launch()
+def ui(
+    path: Optional[str] = typer.Argument(None, help="Project folder to open (default: current directory)"),
+    port: int = typer.Option(7777, "--port", help="Port on 127.0.0.1 (falls back to a free one if busy)"),
+    no_open: bool = typer.Option(False, "--no-open", help="Don't open a browser tab"),
+):
+    """Open the FixMySlop app in your browser (local only)."""
+    from fixmyslop.web.server import serve
+    root = Path(path or ".").resolve()
+    if not root.is_dir():
+        print_error(f"Not a folder: {root}")
+        raise typer.Exit(1)
+    serve(root, port=port, open_browser=not no_open)
+
+
+@app.command(hidden=True)
+def gui(
+    path: Optional[str] = typer.Argument(None),
+    port: int = typer.Option(7777, "--port"),
+):
+    """Alias for `fixmyslop ui`."""
+    ui(path=path, port=port, no_open=False)
 
 
 @app.command()
