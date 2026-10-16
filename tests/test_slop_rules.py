@@ -466,3 +466,34 @@ def test_overlays_may_blur_and_cast_big_shadows(tmp_path):
     cards = '<div className="rounded-xl bg-white/10 backdrop-blur-lg shadow-2xl" />\n' * 9
     found = scan(tmp_path / "c", "Cards.tsx", cards)
     assert "ui/glassmorphism" in found and "ui/heavy-shadows" in found
+
+
+def test_registry_lookup_streams_and_retries(monkeypatch, tmp_path):
+    """--online must not download multi-MB package metadata, and must survive one network blip."""
+    import requests
+    from fixmyslop.core.slop.rules_deps import DependencyIndex
+    calls = []
+
+    class Response:
+        def __init__(self, status):
+            self.status_code = status
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *exc):
+            return False
+
+    def fake_get(url, **kwargs):
+        calls.append((url, kwargs.get("stream")))
+        if "flaky" in url and len([c for c in calls if "flaky" in c[0]]) == 1:
+            raise requests.ConnectionError("blip")
+        return Response(404 if "made-up" in url else 200)
+
+    monkeypatch.setattr(requests, "get", fake_get)
+    index = DependencyIndex(tmp_path, online=True)
+    assert index.exists_on_registry("made-up-pkg", "npm") is False
+    assert index.exists_on_registry("flaky-pkg", "npm") is True        # retried after the blip
+    assert index.exists_on_registry("requests", "pypi") is True
+    assert all(stream for _, stream in calls)
+    assert any("pypi.org/simple/requests" in url for url, _ in calls)
