@@ -323,3 +323,146 @@ def test_design_tokens_are_not_palette_sprawl(tmp_path):
     assert "ui/palette-sprawl" not in scan(tmp_path / "a", "theme.css", ":root {\n" + tokens + "}\n")
     raw = "".join(f".c{n} {{ color: #{n:02x}{n:02x}{n:02x}; }}\n" for n in range(40))
     assert "ui/palette-sprawl" in scan(tmp_path / "b", "theme.css", raw)
+
+
+
+# ─── Found on a real single-file AI page (room booking site) that scanned as "A" ─────────
+
+def test_single_file_page_with_long_lines_is_scanned(tmp_path):
+    """AI pages often put all CSS on a few huge lines; that must not be mistaken for a minified bundle."""
+    from fixmyslop.core.scanner import Scanner
+    css = "".join(f".c{n}{{color:#{n:06x};padding:{n}px}}" for n in range(400))
+    page = tmp_path / "booking.html"
+    page.write_text(f"<style>\n{css}\n</style>\n<a href=\"#\">x</a>\n", encoding="utf-8")
+    assert [p.name for p, _ in Scanner(str(tmp_path)).scan()] == ["booking.html"]
+    bundle = tmp_path / "vendor.js"
+    bundle.write_text("var a=1;" * 2000, encoding="utf-8")
+    assert "vendor.js" not in [p.name for p, _ in Scanner(str(tmp_path)).scan()]
+
+
+def test_css_universal_selector_line_is_not_a_comment(tmp_path):
+    line = "*{box-sizing:border-box}body{font-family:Inter,sans-serif}.field input{outline:0}\n"
+    found = scan(tmp_path, "page.html", "<style>\n" + line + "</style>\n")
+    assert "a11y/focus-removed" in found and "ui/default-font" in found
+
+
+@pytest.mark.parametrize("rule_id, sloppy, clean", [
+    ("ui/fake-social-proof", "<span>Loved by <strong>2,400+ happy travelers</strong></span>",
+     '<select><option value="5">5+ guests</option></select>'),
+    ("ui/fake-ratings", "const stays=[{name:'Loft',rating:'4.96',reviews:84}];",
+     "const stays = await fetchStays();"),
+    ("ui/fake-feature", "button.onclick = () => alert('Sign-in preview: connect your authentication provider here.');",
+     "button.onclick = () => signIn();"),
+    ("ui/two-tone-headline", "<style>.hero h1 em{color:#63845c}</style>\n<h1>Find a place<br>to <em>feel at home.</em></h1>",
+     "<h1>Rooms in Pune from ₹950 a night</h1>"),
+    ("ui/emoji-icons", '<span class="logo">⌂</span><span>✦ Handpicked</span>\n<p>✿</p>\n<p>⌖ Pune</p>\n',
+     "<kbd>⌘K</kbd>\n"),
+])
+def test_room_booking_patterns(tmp_path, rule_id, sloppy, clean):
+    assert rule_id in scan(tmp_path / "bad", "page.html", sloppy + "\n")
+    assert rule_id not in scan(tmp_path / "good", "page.html", clean + "\n")
+
+
+def test_aphorism_lovely_little_stays_voice(tmp_path):
+    copy = "<p>Stays with soul</p>\n<p>Made for the way you want to travel.</p>\n<p>Good stays. Good stories.</p>\n"
+    assert scan(tmp_path, "page.html", copy).count("ui/aphorism-copy") == 3
+
+
+def test_placeholders_are_not_fake_testimonials(tmp_path):
+    form = '<input placeholder="Jane Doe" />\n<input placeholder="Acme Inc." />\n'
+    assert "ui/fake-social-proof" not in scan(tmp_path, "Form.tsx", form)
+
+
+# ─── backend rules ───────────────────────────────────────────────────────────
+
+def test_empty_tests_python_and_js(tmp_path):
+    py = ("def test_creates_user():\n    create_user('a')\n\n"
+          "def test_always_true():\n    assert True\n\n"
+          "def test_real():\n    assert create_user('a').name == 'a'\n\n"
+          "def test_raises():\n    with pytest.raises(ValueError):\n        create_user('')\n")
+    found = [i for i in scan(tmp_path / "py", "tests/test_users.py", py) if i == "slop/empty-test"]
+    assert len(found) == 2
+    js = ("it('renders', () => {\n  render(<App />);\n});\n"
+          "it('shows title', () => {\n  render(<App />);\n  expect(screen.getByText('Hi')).toBeTruthy();\n});\n")
+    assert scan(tmp_path / "js", "src/App.test.tsx", js).count("slop/empty-test") == 1
+    assert "slop/empty-test" not in scan(tmp_path / "app", "src/users.py", py)   # only in test files
+
+
+def test_duplicate_functions_across_files(tmp_path):
+    body = ("    total = 0\n    for item in items:\n        if item.active:\n            total += item.price\n"
+            "    if total > 100:\n        total = total * 0.9\n    return round(total, 2)\n")
+    (tmp_path / "a.py").write_text("def order_total(items):\n" + body, encoding="utf-8")
+    renamed = body.replace("total", "amount").replace("items", "rows").replace("item", "row")
+    (tmp_path / "b.py").write_text("def cart_sum(rows):\n" + renamed, encoding="utf-8")
+    engine = SlopEngine(tmp_path)
+    for name in ("a.py", "b.py"):
+        engine.check_file(tmp_path / name, (tmp_path / name).read_text(encoding="utf-8"))
+    dupes = [i for i in engine.finalize() if i.rule_id == "slop/duplicate-function"]
+    assert len(dupes) == 1 and "order_total" in dupes[0].description
+
+
+def test_pointless_wrappers_need_repetition(tmp_path):
+    wrappers = "".join(f"def get_{n}(x):\n    return fetch_{n}(x)\n\n" for n in range(3))
+    assert "slop/pointless-wrapper" in scan(tmp_path / "a", "svc.py", wrappers)
+    assert "slop/pointless-wrapper" not in scan(tmp_path / "b", "svc.py", "def get(x):\n    return fetch(x)\n")
+
+
+@pytest.mark.parametrize("rule_id, name, sloppy, clean", [
+    ("slop/catch-rethrow", "a.py", "try:\n    run()\nexcept ValueError as e:\n    raise e\n",
+     "try:\n    run()\nexcept ValueError as e:\n    raise RuntimeError('run failed') from e\n"),
+    ("slop/catch-rethrow-js", "a.ts", "try { run() } catch (e) { throw e }", "try { run() } catch (e) { throw new Error(`run: ${e}`) }"),
+    ("slop/ignored-error", "main.go", "if err != nil {\n}\n".replace("\n}", " }"), "if err != nil { return err }"),
+    ("slop/ignored-error", "main.go", "if err != nil { return nil }", "if err != nil { return fmt.Errorf(\"load: %w\", err) }"),
+    ("slop/empty-catch", "Main.java", "try { run(); } catch (IOException e) {}", "try { run(); } catch (IOException e) { log.error(\"run\", e); }"),
+    ("slop/print-stacktrace", "Main.java", "try { run(); } catch (Exception e) { e.printStackTrace(); }",
+     "try { run(); } catch (Exception e) { throw new RuntimeException(e); }"),
+])
+def test_backend_rules(tmp_path, rule_id, name, sloppy, clean):
+    assert rule_id in scan(tmp_path / "bad", name, sloppy + "\n")
+    assert rule_id not in scan(tmp_path / "good", name, clean + "\n")
+
+
+def test_empty_test_understands_helpers_and_smoke_tests(tmp_path):
+    js = ('const close = (a, b) => assert.ok(Math.abs(a - b) < 1e-9);\n'
+          'test("unit prices", () => {\n  close(price(3), 0.225);\n});\n'
+          'test("recording never throws", async () => {\n  await record();\n});\n')
+    assert "slop/empty-test" not in scan(tmp_path / "js", "src/usage.test.ts", js)
+    py = ("def check_user(u):\n    assert u.id\n\n"
+          "def test_create():\n    check_user(create())\n\n"
+          "def test_import_does_not_raise():\n    import app\n")
+    assert "slop/empty-test" not in scan(tmp_path / "py", "tests/test_users.py", py)
+
+
+def test_syntax_rules_ignore_text_in_python(tmp_path):
+    doc = 'GUIDE = "Never swallow errors: no `catch {}`, no `if err != nil { return nil }`."\n'
+    found = scan(tmp_path, "guide.py", doc)
+    assert "slop/empty-catch" not in found and "slop/ignored-error" not in found
+
+
+# ─── precision fixes from the hand-reviewed benchmark sample ────────────────
+
+@pytest.mark.parametrize("rule_id, name, not_slop", [
+    ("a11y/clickable-div", "M.tsx", '<div className="fixed inset-0 bg-black/60" onClick={close}>\n'),
+    ("a11y/clickable-div", "M.tsx", "<div className=\"rounded-2xl\" onClick={(e) => e.stopPropagation()}>\n"),
+    ("a11y/icon-button", "N.tsx", '<Button asChild size="icon">\n  <Link to="/x" aria-label="Partners"><Icon /></Link>\n</Button>\n'),
+    ("a11y/focus-removed", "C.tsx", '"relative flex items-center outline-none aria-selected:bg-accent"\n'),
+    ("slop/empty-catch", "api.ts", "const body = await request.json().catch(() => null);\n"),
+    ("slop/ts-any", "p.ts", 'const p = "- code: any article number printed on the label";\n' * 6),
+])
+def test_benchmark_false_positives_stay_fixed(tmp_path, rule_id, name, not_slop):
+    assert rule_id not in scan(tmp_path, name, not_slop)
+
+
+def test_generated_files_are_not_judged(tmp_path):
+    gen = "/* eslint-disable */\n// This file was automatically generated by TanStack Router.\nexport const x: any = 1;\n"
+    assert scan(tmp_path, "src/routeTree.gen.ts", gen) == []
+
+
+def test_overlays_may_blur_and_cast_big_shadows(tmp_path):
+    overlay = '<div className="fixed inset-0 bg-black/60 backdrop-blur-sm" />\n' * 4
+    assert "ui/glassmorphism" not in scan(tmp_path / "a", "M.tsx", overlay)
+    dialog = '<div className="fixed inset-x-3 top-1/2 rounded-2xl shadow-2xl" />\n' * 9
+    assert "ui/heavy-shadows" not in scan(tmp_path / "b", "M.tsx", dialog)
+    cards = '<div className="rounded-xl bg-white/10 backdrop-blur-lg shadow-2xl" />\n' * 9
+    found = scan(tmp_path / "c", "Cards.tsx", cards)
+    assert "ui/glassmorphism" in found and "ui/heavy-shadows" in found

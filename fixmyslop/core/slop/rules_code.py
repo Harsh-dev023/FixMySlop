@@ -163,7 +163,7 @@ line_rule(
     "slop/empty-catch", "Empty catch block", SEVERITY_MEDIUM, CATEGORY_AI_SMELL, (KIND_SCRIPT,),
     why="An empty catch silently drops errors (failed requests, bad JSON) and the UI just shows nothing.",
     fix="Handle the error: surface it to the user, log it, or rethrow. Don't catch what you can't handle.",
-    pattern=r"\bcatch\s*(?:\([^)]*\))?\s*\{\s*\}|\.catch\(\s*\(\s*\w*\s*\)\s*=>\s*(?:\{\s*\}|null|undefined)\s*\)",
+    pattern=r"\bcatch\s*(?:\([^)]*\))?\s*\{\s*\}|\.catch\(\s*\(\s*\w*\s*\)\s*=>\s*\{\s*\}\s*\)",
 )
 
 # ─── Debug leftovers ─────────────────────────────────────────────────────────
@@ -199,7 +199,7 @@ line_rule(
     "slop/ts-any", "`any` type", SEVERITY_LOW, CATEGORY_AI_SMELL, (KIND_TS,),
     why="`any` switches off the type checker — the reason you're using TypeScript.",
     fix="Use the real type, `unknown` + narrowing, or a generic.",
-    pattern=r":\s*any\b(?!-)|\bas any\b|<any>|\bany\[\]", flags=0,
+    pattern=r":\s*any\b(?=\s*(?:[;,)=>\]|&}]|$))|\bas any\b|<any>|\bany\[\]", flags=0,
     skip_tests=True, project_threshold=5, aggregate_per_file=True,
 )
 

@@ -46,6 +46,7 @@ Optional: `pip install "fixmyslop[analysis]"` adds Ruff + Bandit findings for Py
 ```bash
 fixmyslop scan                    # whole repo
 fixmyslop scan --changed          # only what changed vs main (+ uncommitted)
+fixmyslop baseline                # existing codebase: accept today's issues, report only new ones
 fixmyslop ui                      # the app: browse issues, apply fixes, copy prompts for your agent
 fixmyslop scan --open             # one-off interactive HTML report
 fixmyslop fix --safe-only         # behavior-preserving auto-fixes
@@ -119,6 +120,11 @@ no external requests) and uses the same engine as the CLI:
 `slop/step-comments`, `slop/debugger`, `slop/console-log`, `slop/emoji-log`, `slop/ts-any`, `slop/ts-ignore`,
 `slop/blanket-suppression`, `slop/placeholder-credential`, `slop/ai-voice`
 
+**Backend** — `slop/empty-test` (tests that assert nothing — pytest, Jest, Vitest, Mocha), `slop/duplicate-function`
+(the same body copy-pasted across files, names ignored), `slop/pointless-wrapper`, `slop/catch-rethrow`,
+Go `slop/ignored-error` (`if err != nil { return nil }`), Java/Kotlin `slop/print-stacktrace`, and empty `catch {}`
+in JS/TS, Java, C#, Kotlin, Swift, PHP and Dart
+
 **Dependencies** — `deps/phantom-import`: imports that aren't stdlib, local, declared, or installed (hallucinated
 packages are what [slopsquatting](https://en.wikipedia.org/wiki/Slopsquatting) attacks register).
 `--online` confirms against PyPI / npm. `deps/undeclared-import`: works on your machine, breaks in CI.
@@ -175,6 +181,17 @@ fixmyslop scan -f prompt > brief.md    # or paste the brief yourself
 a concrete fix for every rule plus UI design direction), runs the agent, re-scans, and repeats for up to `--rounds`.
 It ends with the before/after score.
 
+## Existing codebase? Baseline it
+
+```bash
+fixmyslop baseline          # accept today's issues (writes .fixmyslop-baseline.json — commit it)
+fixmyslop scan --fail-on high   # from now on only NEW slop is reported and fails CI
+fixmyslop scan --no-baseline    # see everything again
+```
+
+Fingerprints ignore line numbers, so editing code above an old issue doesn't bring it back. Also available in the
+app under Setup.
+
 ## CI
 
 ```yaml
@@ -187,7 +204,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - uses: MrSpideyNihal/FixMySlop@v0.5.0
+      - uses: MrSpideyNihal/FixMySlop@v0.6.0
         with: { fail-on: high, changed-only: true }
 ```
 
@@ -196,7 +213,7 @@ Findings show up as inline PR annotations (SARIF). Also on the [GitHub Marketpla
 ```yaml
 repos:
   - repo: https://github.com/MrSpideyNihal/FixMySlop
-    rev: v0.5.0
+    rev: v0.6.0
     hooks: [{ id: fixmyslop }]
 ```
 
@@ -221,6 +238,13 @@ Skip a file: `fixmyslop-ignore-file` in its first lines. Paths passed explicitly
 `markdown` · `html` (a shareable single file with filters, search and "copy fix prompt" per file) · `csv` · `pdf`. Save with `-s report.html` (format inferred from the extension).
 Exit codes: `0` clean, `1` issues at/above `--fail-on`, `2` usage error.
 
+## How accurate is it?
+
+On a pinned corpus of 9 AI-built apps and 4 hand-built repos, **95% of findings were correct** in a random,
+hand-reviewed sample of 80, and AI-built apps averaged about 2× more findings per 1,000 lines. Method, raw labels,
+per-repo grades and limitations: [benchmarks/BENCHMARK.md](benchmarks/BENCHMARK.md). Reproduce with
+`python benchmarks/run.py`.
+
 ## Slop score
 
 0 (clean) to 100, from severity-weighted findings per 1,000 lines, so a 500-line app and a 500k-line monorepo
@@ -244,6 +268,11 @@ python screenshots/make_screenshots.py   # regenerate README screenshots
 Adding a rule: write a check in `fixmyslop/core/slop/rules_*.py` with the `@rule` decorator (or `line_rule` for a regex),
 then add a sloppy + clean pair to `tests/test_slop_rules.py`. Every rule needs a `why` and an actionable `fix` —
 the fix text is what agents follow.
+
+## Security and changes
+
+See [SECURITY.md](SECURITY.md) for how FixMySlop handles your code (local, offline by default, secrets redacted)
+and how to report a vulnerability, and [CHANGELOG.md](CHANGELOG.md) for what changed in each release.
 
 ## License
 

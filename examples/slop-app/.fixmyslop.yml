@@ -1,0 +1,18 @@
+# FixMySlop configuration — https://github.com/MrSpideyNihal/FixMySlop
+# Paths to skip (globs, relative to this file)
+exclude:
+  - "**/*.min.js"
+  - "**/vendor/**"
+
+# Rules or rule groups to turn off: ui, a11y, slop, sec, deps, or ids like "ui/default-font"
+disable: []
+
+# Per-rule severity overrides (CRITICAL, HIGH, MEDIUM, LOW, INFO)
+severity: {}
+
+# Exit non-zero in CI when an issue at or above this severity is found
+fail_on: high
+
+# Claude Code / agent hook: only block the agent for issues at or above this severity
+hook:
+  min_severity: MEDIUM

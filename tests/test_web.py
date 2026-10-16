@@ -124,3 +124,13 @@ def test_snippet_redacts_secrets(server, project):
     (project / "config.py").write_text('KEY = "sk-proj-abcdefghijklmnopqrstuvwxyz123456"\n', encoding="utf-8")
     _, body, _ = call(base + "/api/snippet?file=config.py&line=1", token=app.token)
     assert "abcdefghijklmnop" not in body and "redacted" in body
+
+
+def test_baseline_from_the_app(server, project):
+    app, base = server
+    _, body, _ = call(base + "/api/baseline", token=app.token, body={})
+    report = json.loads(body)
+    assert report["issues"] == [] and report["baselined"] > 0
+    assert json.loads(call(base + "/api/state", token=app.token)[1])["baseline"] is True
+    _, body, _ = call(base + "/api/baseline", token=app.token, body={"clear": True})
+    assert json.loads(body)["issues"] and not (project / ".fixmyslop-baseline.json").exists()

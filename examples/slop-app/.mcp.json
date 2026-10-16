@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "fixmyslop": {
+      "command": "fixmyslop",
+      "args": [
+        "mcp"
+      ]
+    }
+  }
+}

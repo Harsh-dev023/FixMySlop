@@ -129,6 +129,7 @@ def report_payload(report, engine) -> dict:
         "files": report.scanned_files,
         "lines": report.lines_scanned,
         "seconds": round(report.scan_time_s, 2),
+        "baselined": report.baselined,
         "scannedAt": entry["at"],
         "previous": history[-2] if len(history) > 1 else None,
         "designContext": engine.theme.design_context(),
@@ -322,6 +323,7 @@ class UIApp:
                 "recent": self.state.recents(),
                 "report": self.state.report_payload,
                 "integrations": integrations_status(root) if root else [],
+                "baseline": bool(root and (root / ".fixmyslop-baseline.json").is_file()),
             }
         if path == "/api/rules":
             return rules_payload(self.state.root)
@@ -350,6 +352,8 @@ class UIApp:
             return {"disable": disabled}
         if path == "/api/integration":
             return self._install(str(body.get("id", "")))
+        if path == "/api/baseline":
+            return self._baseline(clear=bool(body.get("clear")))
         raise FileNotFoundError(path)
 
     # actions ------------------------------------------------------------------
@@ -372,6 +376,18 @@ class UIApp:
             applied = apply_safe_fixes(report.issues)
         result = self._scan()
         return {"applied": sum(applied.values()), "files": len(applied), "before": before, "report": result}
+
+    def _baseline(self, clear: bool = False) -> dict:
+        from fixmyslop.cli.cli_app import run_scan
+        from fixmyslop.core.slop.baseline import BASELINE_FILE, write_baseline
+        root = self._root()
+        if clear:
+            (root / BASELINE_FILE).unlink(missing_ok=True)
+        else:
+            with self.state.lock:
+                report, engine = run_scan([str(root)], min_severity="info", use_baseline=False)
+                write_baseline(root, report.issues, engine.relpath)
+        return self._scan()
 
     def _brief(self, rel_file: Optional[str]) -> str:
         from fixmyslop.cli.cli_app import run_scan
