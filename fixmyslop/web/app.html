@@ -224,7 +224,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
   const SEVERITIES = ["CRITICAL", "HIGH", "MEDIUM", "LOW", "INFO"];
   const VIEWS = ["overview", "issues", "rules", "setup"];
   const state = {
-    view: "overview", project: null, recent: [], report: null, integrations: [], rules: null,
+    view: "overview", project: null, recent: [], report: null, integrations: [], rules: null, baseline: false,
     scanning: false, selected: null, filters: { q: "", sev: new Set(SEVERITIES), cat: "", group: "file", file: "", rule: "" },
     rulesDirty: false,
   };
@@ -325,6 +325,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
 
   function applyState(data) {
     state.project = data.project; state.recent = data.recent || []; state.integrations = data.integrations || [];
+    state.baseline = !!data.baseline;
     if (data.report !== undefined) state.report = data.report;
     $("projectName").textContent = state.project ? state.project.name : "Choose a project";
     $("projectBtn").title = state.project ? state.project.root : "";
@@ -426,12 +427,19 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
     const header = h("div", { class: "row wrap", style: "justify-content:space-between;align-items:flex-end;margin-bottom:20px" },
       h("div", {},
         h("div", { class: "score" }, h("b", { text: String(r.score) }), h("span", { class: "muted", text: "/ 100 slop score" }), h("span", { class: "grade", text: `Grade ${r.grade}` })),
-        h("p", { class: "muted", style: "margin-top:6px" }, `${plural(issues.length, "issue")} · ${plural(r.files, "file")} · ${r.lines.toLocaleString()} lines · ${r.seconds}s · scanned at ${when(r.scannedAt)}`),
+        h("p", { class: "muted", style: "margin-top:6px" }, `${plural(issues.length, r.baselined ? "new issue" : "issue")} · ${plural(r.files, "file")} · ${r.lines.toLocaleString()} lines · ${r.seconds}s · scanned at ${when(r.scannedAt)}`
+          + (r.baselined ? ` · ${r.baselined} pre-existing hidden by baseline` : "")),
         delta && h("p", { style: "margin-top:2px" }, delta)),
     );
+    if (!r.files) {
+      return h("div", { class: "page" }, h("div", { class: "card card-pad empty" },
+        h("h1", { text: "Nothing was scanned" }),
+        h("p", { text: "No supported files were found in this folder (HTML, CSS, JS/TS, JSX/TSX, Vue, Svelte, Astro, Python…). Check that you opened the right project." }),
+        h("div", { style: "margin-top:16px" }, h("button", { class: "btn", type: "button", onclick: openProjectDialog }, "Open another project"))));
+    }
     if (!issues.length) {
       return h("div", { class: "page" }, header, h("div", { class: "card card-pad empty" },
-        h("h1", { text: "No slop found" }),
+        h("h1", { text: r.baselined ? "No new slop since the baseline" : "No slop found" }),
         h("p", { text: "Keep it that way: let your coding agent check its own work, and gate pull requests in CI." }),
         h("div", { style: "margin-top:16px" }, h("button", { class: "btn", type: "button", onclick: () => go("setup") }, "Set up integrations"))));
     }
@@ -621,6 +629,7 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
       ["Only what changed vs main", "fixmyslop scan --changed"],
       ["Apply safe fixes, then hand the rest to your agent", "fixmyslop fix"],
       ["Fail CI on HIGH issues", "fixmyslop scan --fail-on high"],
+      ["Accept existing issues (only new ones get reported)", "fixmyslop baseline"],
       ["Fix prompt for any agent", "fixmyslop scan -f prompt"],
     ];
     return h("div", { class: "page stack" },
@@ -631,6 +640,14 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
           h("div", {}, h("h3", { text: item.name }), h("p", { class: "muted", text: item.what })),
           item.installed ? h("span", { class: "installed" }, check(), "Installed")
             : h("button", { class: "btn", type: "button", onclick: () => install(item.id) }, "Install")))),
+      h("div", { class: "card card-pad" }, h("h2", { text: "Baseline for existing code" }),
+        h("p", { class: "muted", style: "margin-bottom:12px" }, "Big codebase with lots of existing issues? Accept them once, and FixMySlop (and CI) will only report slop added after today. Saved to ",
+          h("code", { text: ".fixmyslop-baseline.json" }), " — commit it."),
+        h("div", { class: "row wrap" },
+          h("button", { class: "btn", type: "button", disabled: !state.report || state.scanning, onclick: () => setBaseline(false) },
+            state.baseline ? "Re-accept current issues" : "Accept current issues"),
+          state.baseline ? h("button", { class: "btn ghost", type: "button", onclick: () => setBaseline(true) }, "Remove baseline") : null,
+          state.baseline ? h("span", { class: "installed" }, check(), "Baseline active") : null)),
       h("div", { class: "card" }, h("div", { style: "padding:14px 16px;border-bottom:1px solid var(--line)" }, h("h2", { text: "Command line", style: "margin:0" }),
         h("p", { class: "muted", text: "Everything here is also available from the terminal." })),
         cmds.map(([what, cmd]) => h("div", { class: "cmd" }, h("div", {}, h("p", { text: what }), h("code", { text: cmd })),
@@ -640,6 +657,16 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
         h("div", { class: "cmd", style: "border:1px solid var(--line);border-radius:6px" }, h("code", { text: "fixmyslop scan --llm -b http://localhost:11434/v1 -m qwen2.5-coder:7b" }),
           h("button", { class: "btn ghost small", type: "button", onclick: () => copy("fixmyslop scan --llm -b http://localhost:11434/v1 -m qwen2.5-coder:7b") }, "Copy"))),
       h("p", { class: "faint" }, `FixMySlop ${"__VERSION__"} · `, h("a", { href: "https://github.com/MrSpideyNihal/FixMySlop", target: "_blank", rel: "noopener noreferrer", style: "color:inherit" }, "GitHub")));
+  }
+  async function setBaseline(clear) {
+    if (!clear && !confirm("Accept all current issues as pre-existing? Only new slop will be reported after this.")) return;
+    try {
+      state.scanning = true; renderStatus(); render();
+      state.report = await api("/api/baseline", { clear });
+      state.baseline = !clear;
+      toast(clear ? "Baseline removed" : "Baseline saved. Only new issues will be reported.");
+    } catch (e) { toast(e.message); }
+    state.scanning = false; renderStatus(); render();
   }
   async function install(id) {
     try {

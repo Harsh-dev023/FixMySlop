@@ -60,7 +60,7 @@ TEST_PATH_RE = re.compile(
 
 # Whole-line comment openers per family.
 _HASH_COMMENT = re.compile(r"^\s*#(?!!)")
-_SLASH_COMMENT = re.compile(r"^\s*(//|\{/\*|\*(?!\*/)|/\*)")
+_SLASH_COMMENT = re.compile(r"^\s*(//|\{/\*|\*(?=\s|$)|/\*)")
 _HTML_COMMENT_OPEN = "<!--"
 _HTML_COMMENT_CLOSE = "-->"
 
@@ -189,13 +189,15 @@ def rule(id: str, title: str, severity: str, category: str, kinds: Iterable[str]
 
 def line_rule(id: str, title: str, severity: str, category: str, kinds: Iterable[str],
               why: str, fix: str, pattern: str, flags: int = re.IGNORECASE,
-              scope: str = "code", **options) -> None:
+              scope: str = "code", unless_inside: Optional[str] = None, **options) -> None:
     """Register a rule that matches a regex against individual lines.
 
     scope: "code" skips comment lines, "comment" only checks comment lines,
     "all" checks every line.
+    unless_inside: a regex for spans (e.g. placeholder="...") where a match doesn't count.
     """
     regex = re.compile(pattern, flags)
+    shield = re.compile(unless_inside, re.IGNORECASE) if unless_inside else None
 
     def check(ctx: FileContext) -> Iterable[Hit]:
         for n, line in enumerate(ctx.lines, 1):
@@ -204,9 +206,12 @@ def line_rule(id: str, title: str, severity: str, category: str, kinds: Iterable
                 continue
             if scope == "comment" and not is_comment:
                 continue
-            match = regex.search(line)
-            if match:
+            shielded = [m.span() for m in shield.finditer(line)] if shield else []
+            for match in regex.finditer(line):
+                if any(a <= match.start() < b for a, b in shielded):
+                    continue
                 yield Hit(n, line.strip(), match.group(0).strip())
+                break
 
     rule(id, title, severity, category, kinds, why, fix, **options)(check)
 

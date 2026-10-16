@@ -44,7 +44,7 @@ jobs:
 
 PRE_COMMIT_ENTRY = """\
   - repo: https://github.com/MrSpideyNihal/FixMySlop
-    rev: v0.5.0
+    rev: v0.6.0
     hooks:
       - id: fixmyslop
 """
