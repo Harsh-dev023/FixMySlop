@@ -204,7 +204,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - uses: MrSpideyNihal/FixMySlop@v0.6.1
+      - uses: MrSpideyNihal/FixMySlop@v0.6.2
         with: { fail-on: high, changed-only: true }
 ```
 
@@ -213,7 +213,7 @@ Findings show up as inline PR annotations (SARIF). Also on the [GitHub Marketpla
 ```yaml
 repos:
   - repo: https://github.com/MrSpideyNihal/FixMySlop
-    rev: v0.6.1
+    rev: v0.6.2
     hooks: [{ id: fixmyslop }]
 ```
 
