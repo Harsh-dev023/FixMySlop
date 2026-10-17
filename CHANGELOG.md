@@ -3,6 +3,15 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); while in 0.x, minor versions may
 include breaking changes.
 
+## 0.6.4
+
+- **Code shown to users isn't treated as code.** In JS/TS, the contents of multi-line template strings (API
+  examples in a docs modal, inline `<script>` strings) are skipped by code rules. Before, a SaaS site's
+  "API docs" modal showing `import { Client } from '@acme/sdk'` was reported as a HIGH missing package. On
+  64 AI-built sites this removed 12 false findings (7 missing-package, 4 empty-catch, 1 console.log) and
+  lost no real ones. UI rules still read template strings, since class lists live there too.
+- `slop/placeholder-impl` catches "keeping it simple for now".
+
 ## 0.6.3
 
 **Docs slop (new)**: READMEs and Markdown docs are scanned (`.md`, `.mdx`; READMEs, root-level docs, `docs/`, `.github/`).

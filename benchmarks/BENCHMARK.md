@@ -37,7 +37,7 @@ generated files, and shadcn `asChild` buttons. Each became a fix plus a regressi
 | Repo | Group | Score | Grade | Issues | Lines |
 |---|---|---|---|---|---|
 | clippr-v2-lovable | AI | 25.7 | C | 526 | 65,145 |
-| dl-life-canvas | AI | 21.5 | B | 61 | 11,446 |
+| dl-life-canvas | AI | 20.8 | B | 59 | 11,446 |
 | aura-wardrobe-intelligence | AI | 13.4 | B | 263 | 67,890 |
 | municipal-connect | AI | 8.7 | A | 19 | 9,352 |
 | leadmachine-leadcatch-lovable | AI | 5.9 | A | 45 | 20,013 |

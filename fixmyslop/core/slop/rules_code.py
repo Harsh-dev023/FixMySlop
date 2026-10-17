@@ -71,6 +71,8 @@ line_rule(
             r"|\badd (?:your|more|actual|real) (?:logic|implementation|code|validation) here\b"
             r"|\bTODO:?\s*(?:add (?:real|actual|proper)|replace (?:with|this) (?:with )?(?:real|actual))\b"
             r"|\bthis would (?:normally|typically)\b"
+            r"|\bkeep(?:ing)? (?:it|this|things) simple for now\b"
+            r"|\bfor now,? (?:we |I )?(?:just |simply )?(?:return|hardcode|hard-code|assume|use a (?:fixed|static|dummy))\b"
             r"|\byou (?:would|might|may|could|should) (?:want to |need to )?(?:add|implement|replace|use a real)\b",
     scope="comment", skip_tests=True,
 )
@@ -322,7 +324,11 @@ def check_narrating_comment(ctx: FileContext) -> Iterable[Hit]:
     fix="Delete the step labels; extract well-named functions if the steps are genuinely distinct.",
 )
 def check_step_comments(ctx: FileContext) -> Iterable[Hit]:
-    """Flag files with 3+ 'Step N:' comments."""
+    """Flag files with 3+ 'Step N:' comments.
+
+    Plain numbered comments ('// 1. Load .env (lowest priority)') are not flagged: humans use them to
+    document precedence and fallback order, and they look the same as AI narration.
+    """
     steps = [
         n for n in ctx.comment_lines
         if re.match(r"^\W*step\s+\d+\s*[:.)\-]", _COMMENT_PREFIX.sub("", ctx.line_text(n)), re.IGNORECASE)
