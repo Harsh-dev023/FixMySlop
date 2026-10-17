@@ -208,14 +208,14 @@
  {
   "group": "hand",
   "name": "taxonomy",
-  "score": 6.5,
+  "score": 5.9,
   "grade": "A",
-  "issues": 14,
+  "issues": 13,
   "lines": 7148,
   "rules": {
-   "slop/placeholder-impl": 2,
    "slop/narrating-comment": 5,
    "a11y/focus-removed": 3,
+   "slop/placeholder-impl": 1,
    "slop/blanket-suppression": 2,
    "ui/default-font": 1,
    "ui/off-scale-values": 1

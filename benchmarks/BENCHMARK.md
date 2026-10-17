@@ -46,7 +46,7 @@ generated files, and shadcn `asChild` buttons. Each became a fix plus a regressi
 | money-kalkulacka | AI | 1.5 | A | 4 | 10,818 |
 | lovable-portfoilo | AI | 0.0 | A | 0 | 6,182 |
 | commerce | hand | 9.4 | A | 12 | 3,554 |
-| taxonomy | hand | 6.5 | A | 14 | 7,148 |
+| taxonomy | hand | 5.9 | A | 13 | 7,148 |
 | saas-starter | hand | 3.0 | A | 4 | 3,488 |
 | next-template | hand | 0.0 | A | 0 | 510 |
 
