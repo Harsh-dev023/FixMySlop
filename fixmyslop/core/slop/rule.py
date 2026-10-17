@@ -59,6 +59,7 @@ TEST_PATH_RE = re.compile(
 )
 
 # Whole-line comment openers per family.
+_HASH_LANGS = {".rb"}            # code languages whose comments start with #
 _HASH_COMMENT = re.compile(r"^\s*#(?!!)")
 _SLASH_COMMENT = re.compile(r"^\s*(//|\{/\*|\*(?=\s|$)|/\*)")
 _HTML_COMMENT_OPEN = "<!--"
@@ -95,7 +96,7 @@ class FileContext:
     def _find_comment_lines(self) -> set[int]:
         """Return 1-based numbers of lines that are entirely comments."""
         result: set[int] = set()
-        is_python = KIND_PYTHON in self.kinds
+        is_python = KIND_PYTHON in self.kinds or self.path.suffix.lower() in _HASH_LANGS
         in_block = False
         in_html = False
         for n, line in enumerate(self.lines, 1):

@@ -7,7 +7,7 @@ from pathlib import Path
 
 # ─── App Identity ───────────────────────────────────────────────────────────
 APP_NAME = "FixMySlop"
-APP_VERSION = "0.6.2"
+APP_VERSION = "0.6.3"
 APP_DESCRIPTION = "The slop linter for the AI-agent era. Catch it, then let your agent fix it."
 APP_AUTHOR = "Nihal Rodge"
 APP_LICENSE = "MIT"
@@ -87,8 +87,8 @@ SUPPORTED_EXTENSIONS = {
     ".py", ".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs", ".mts", ".cts",
     ".vue", ".svelte", ".astro", ".html", ".htm",
     ".css", ".scss", ".sass", ".less",
-    ".go", ".rs", ".java", ".cpp", ".c",
-    ".cs", ".rb", ".php", ".swift", ".kt",
+    ".go", ".rs", ".java", ".cpp", ".c", ".h", ".hpp",
+    ".cs", ".rb", ".php", ".swift", ".kt", ".kts", ".scala", ".dart", ".groovy",
 }
 
 # Severity threshold names accepted by --fail-on / --min-severity

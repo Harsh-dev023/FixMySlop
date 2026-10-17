@@ -497,3 +497,40 @@ def test_registry_lookup_streams_and_retries(monkeypatch, tmp_path):
     assert index.exists_on_registry("requests", "pypi") is True
     assert all(stream for _, stream in calls)
     assert any("pypi.org/simple/requests" in url for url, _ in calls)
+
+
+def test_metacall_false_positives_stay_fixed(tmp_path):
+    """Found scanning metacall/deploy: hand-written code that must not be flagged."""
+    js = ("import { ok, strictEqual as eq } from 'assert';\n"
+          "describe('deploy', () => {\n"
+          "  it('parses args', () => {\n"
+          "    const args = parse(['--dev']);\n"
+          "    eq(args.dev, true);\n"
+          "  });\n"
+          "  it('works', () => { ok(run()); });\n"
+          "});\n")
+    assert "slop/empty-test" not in scan(tmp_path / "a", "src/test/cli.spec.ts", js)
+
+    commented = ("const main = () => {\n"
+                 "  run();\n"
+                 "};\n"
+                 "// const old = () => {\n"
+                 "// ...\n"
+                 "// };\n"
+                 "main();\n")
+    assert "slop/elided-code" not in scan(tmp_path / "b", "hooks/pre-push.js", commented)
+
+    elided = "function save() {\n  validate();\n  // ...\n  persist();\n}\n"
+    assert "slop/elided-code" in scan(tmp_path / "c", "src/save.js", elided)
+
+    todo = "export async function poll() {\n  // TODO: Implement polling with waitFor\n  return fetchStatus();\n}\n"
+    assert "slop/placeholder-impl" not in scan(tmp_path / "d", "src/logs.ts", todo)
+
+
+def test_more_languages_are_scanned(tmp_path):
+    ruby = "def total(items)\n  sum = 0\n  # ... existing code ...\n  sum\nend\n"
+    assert "slop/elided-code" in scan(tmp_path / "rb", "lib/total.rb", ruby)
+    dart = "void load() {\n  try {\n    fetch();\n  } catch (e) {}\n}\n"
+    assert "slop/empty-catch" in scan(tmp_path / "dart", "lib/load.dart", dart)
+    groovy = "def load() {\n  try { run() } catch (Exception e) { e.printStackTrace() }\n}\n"
+    assert "slop/print-stacktrace" in scan(tmp_path / "groovy", "src/Load.groovy", groovy)

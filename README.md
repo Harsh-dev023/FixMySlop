@@ -72,7 +72,9 @@ fixmyslop rules <rule-id>              # why a rule exists and how to fix it
 ```
 
 Loop: scan → fix what the brief says → re-scan until clean. Report the before/after slop score to the user.
-Supported files: Python, JS/TS, JSX/TSX, Vue, Svelte, Astro, HTML, CSS/SCSS (plus generic checks for Go, Rust, Java, C/C++, C#, Ruby, PHP, Swift, Kotlin).
+Supported files: Python, JS/TS, JSX/TSX, Vue, Svelte, Astro, HTML, CSS/SCSS/Less (full rule set), plus Go, Java, Kotlin,
+Groovy, C#, Swift, PHP, Scala, Dart, Rust, C/C++ and Ruby (language-specific and general checks). Details:
+[Supported languages](#supported-languages).
 
 ## The app
 
@@ -135,6 +137,43 @@ redacted in output), `sec/public-env-secret` (`NEXT_PUBLIC_*SECRET*`, `VITE_*OPE
 
 Plus Ruff, Bandit and Semgrep findings when installed. `fixmyslop rules` lists everything;
 `fixmyslop rules ui/ai-gradient` explains one.
+
+## Supported languages
+
+Depth varies by language. Frontend and Python/JS/TS backends get the full rule set; other languages get the
+checks that look the same in any syntax.
+
+| Language | Files | What runs |
+|---|---|---|
+| **React, Next.js, Vue, Svelte, Astro, HTML** | `.jsx` `.tsx` `.vue` `.svelte` `.astro` `.html` `.htm` | Everything: all UI and accessibility rules (Tailwind classes, inline styles and `<style>` blocks), plus the JS/TS checks below for the script parts |
+| **CSS** | `.css` `.scss` `.sass` `.less` | UI style rules: AI gradients, glassmorphism, glow, shadows, default fonts, z-index wars, `!important`, palette sprawl (CSS variables count as design tokens) |
+| **JavaScript, TypeScript** | `.js` `.mjs` `.cjs` `.ts` `.mts` `.cts` | Code slop, `any` / `@ts-ignore`, empty tests (Jest, Vitest, Mocha, `node:test`, chai), duplicate functions, catch-and-rethrow, hallucinated or undeclared npm imports, security |
+| **Python** | `.py` | Code slop, stub functions, swallowed exceptions, bare `except`, empty tests (pytest, unittest), duplicate functions, pointless wrappers, hallucinated or undeclared PyPI imports, security. Optional Ruff and Bandit |
+| **Go** | `.go` | Ignored errors (`if err != nil { return nil }`) plus the general checks |
+| **Java, Kotlin, Groovy** | `.java` `.kt` `.kts` `.groovy` | Empty `catch`, `printStackTrace()`-only handlers, plus the general checks |
+| **C#, Swift, PHP, Scala, Dart** | `.cs` `.swift` `.php` `.scala` `.dart` | Empty `catch` plus the general checks |
+| **Rust, C, C++, Ruby** | `.rs` `.c` `.h` `.cpp` `.hpp` `.rb` | The general checks |
+
+**General checks** (every language above): elided code (`// ... existing code ...`), placeholder
+implementations, narrating and step-by-step comments, chatbot voice in comments, leaked keys and hardcoded
+credentials, SQL built from strings, disabled TLS verification, CORS `*`, blanket lint suppression.
+
+Package checks (`deps/*`) read `package.json`, `requirements*.txt`, `pyproject.toml`, `setup.py`/`setup.cfg`,
+`Pipfile` and `environment.yml`; `go.mod`, `Cargo.toml` and Maven/Gradle aren't checked yet. Minified bundles,
+generated files, lockfiles and `node_modules`/`.venv`/`dist` are skipped.
+
+## What it can't catch
+
+FixMySlop finds the *tells* that AI-written code leaves behind. It doesn't understand what your code is meant to
+do, so it won't catch:
+
+- logic that is wrong but looks normal, or a fix for the symptom instead of the cause
+- a test that asserts the wrong thing (it only catches tests that assert nothing)
+- a change much bigger than the task needed, or a rewrite of a helper that already existed elsewhere
+- design quality beyond the patterns above: it can tell you the page has the AI look, not that the layout is good
+
+A clean scan means "none of the known tells", not "this code is correct". Keep code review and tests; use
+FixMySlop so reviewers stop spending their time on the obvious stuff.
 
 ## Use it with your agent
 
@@ -204,7 +243,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - uses: MrSpideyNihal/FixMySlop@v0.6.2
+      - uses: MrSpideyNihal/FixMySlop@v0.6.3
         with: { fail-on: high, changed-only: true }
 ```
 
@@ -213,7 +252,7 @@ Findings show up as inline PR annotations (SARIF). Also on the [GitHub Marketpla
 ```yaml
 repos:
   - repo: https://github.com/MrSpideyNihal/FixMySlop
-    rev: v0.6.2
+    rev: v0.6.3
     hooks: [{ id: fixmyslop }]
 ```
 
