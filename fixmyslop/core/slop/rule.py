@@ -21,6 +21,7 @@ KIND_TS = "ts"
 KIND_MARKUP = "markup"      # renders UI: html, jsx, tsx, vue, svelte, astro
 KIND_STYLE = "style"        # css family (or files with <style> blocks)
 KIND_CODE = "code"          # any programming language
+KIND_DOC = "doc"           # Markdown docs
 KIND_ENV = "env"           # .env files
 KIND_ANY = "any"
 
@@ -43,6 +44,9 @@ _EXT_KINDS = {
     ".scss": {KIND_STYLE},
     ".sass": {KIND_STYLE},
     ".less": {KIND_STYLE},
+    ".md": {KIND_DOC},
+    ".mdx": {KIND_DOC},
+    ".markdown": {KIND_DOC},
 }
 
 
@@ -101,6 +105,7 @@ class FileContext:
         result: set[int] = set()
         is_python = (KIND_PYTHON in self.kinds or KIND_ENV in self.kinds
                      or self.path.suffix.lower() in _HASH_LANGS)
+        is_doc = KIND_DOC in self.kinds        # Markdown: only <!-- --> is a comment (# is a heading)
         in_block = False
         in_html = False
         for n, line in enumerate(self.lines, 1):
@@ -119,6 +124,8 @@ class FileContext:
                 result.add(n)
                 if _HTML_COMMENT_CLOSE not in stripped:
                     in_html = True
+                continue
+            if is_doc:
                 continue
             if is_python:
                 if _HASH_COMMENT.match(line):

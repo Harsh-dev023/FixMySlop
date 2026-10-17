@@ -8,7 +8,7 @@ from typing import Iterable
 
 from fixmyslop.core.slop.rule import (
     FileContext, Hit, rule, line_rule,
-    KIND_CODE, KIND_PYTHON, KIND_SCRIPT, KIND_TS, KIND_MARKUP, KIND_ANY,
+    KIND_CODE, KIND_PYTHON, KIND_SCRIPT, KIND_TS, KIND_MARKUP, KIND_ANY, KIND_DOC,
 )
 from fixmyslop.core.slop.rules_ui import EMOJI_RE
 from fixmyslop.macros import (
@@ -38,6 +38,8 @@ _ELIDED_BARE = re.compile(r"^\s*(?:#|//|/\*|\{/\*|<!--)\s*\.\.\.\s*(?:\*/\}?|-->
 )
 def check_elided_code(ctx: FileContext) -> Iterable[Hit]:
     """Worded elision markers anywhere in comments; a bare `// ...` only between lines of real code."""
+    if KIND_DOC in ctx.kinds:
+        return
     def neighbour_is_code(n: int, step: int) -> bool:
         m = n + step
         while 1 <= m <= len(ctx.lines) and not ctx.line_text(m).strip():

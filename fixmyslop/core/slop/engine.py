@@ -15,8 +15,10 @@ from typing import Optional
 
 from fixmyslop.core.issue import Issue
 from fixmyslop.core.slop.config import SlopConfig, load_config
-from fixmyslop.core.slop.rule import RULES, FileContext, Hit, Rule, KIND_MARKUP, KIND_STYLE
-from fixmyslop.core.slop import rules_ui, rules_code, rules_security, rules_deps, rules_backend  # noqa: F401
+from fixmyslop.core.slop.rule import RULES, FileContext, Hit, Rule, KIND_MARKUP, KIND_STYLE, KIND_DOC
+from fixmyslop.core.slop import (  # noqa: F401
+    rules_ui, rules_code, rules_security, rules_deps, rules_backend, rules_docs,
+)
 from fixmyslop.core.slop.rules_deps import DependencyIndex
 from fixmyslop.core.slop.theme import ThemeIndex
 from fixmyslop.macros import (
@@ -134,7 +136,8 @@ class SlopEngine:
             return []
         ctx = FileContext(path, rel, content, project=self)
         self.files_scanned += 1
-        self.lines_scanned += sum(1 for line in ctx.lines if line.strip())
+        if KIND_DOC not in ctx.kinds:      # the score is slop per line of code; prose would dilute it
+            self.lines_scanned += sum(1 for line in ctx.lines if line.strip())
 
         vendored = self.is_vendored(rel) or bool(_GENERATED_NAME.search(rel)) \
             or bool(_GENERATED_HEADER.search("\n".join(content.splitlines()[:5])))

@@ -135,6 +135,12 @@ packages are what [slopsquatting](https://en.wikipedia.org/wiki/Slopsquatting) a
 redacted in output), `sec/env-secret` (a `.env` with real keys that git will commit), `sec/public-env-secret` (`NEXT_PUBLIC_*SECRET*`, `VITE_*OPENAI*`), `sec/hardcoded-credential`,
 `sec/sql-injection`, `sec/cors-wildcard`, `sec/tls-disabled`, `sec/raw-html`, `sec/eval`
 
+**Docs** — READMEs and Markdown docs. Checked against the real repo: `docs/missing-script` (`npm run test` when
+package.json has no `test` script), `docs/dead-link` (links and images to files that don't exist, a LICENSE that
+isn't there), `docs/placeholder` (`git clone https://github.com/yourusername/...`), `docs/chatbot-residue` <!-- fixmyslop-ignore[docs/placeholder]: example -->
+("Certainly! Here's a comprehensive README", "[Insert screenshot here]"). Style: `docs/emoji-headings`
+(`## 🚀 Features`, `## 🛠️ Tech Stack`) and `docs/hype-copy` ("seamless", "cutting-edge", "Made with ❤️").
+
 Plus Ruff, Bandit and Semgrep findings when installed. `fixmyslop rules` lists everything;
 `fixmyslop rules ui/ai-gradient` explains one.
 
@@ -154,6 +160,7 @@ checks that look the same in any syntax.
 | **C#, Swift, PHP, Scala, Dart** | `.cs` `.swift` `.php` `.scala` `.dart` | Empty `catch` plus the general checks |
 | **Rust, C, C++, Ruby** | `.rs` `.c` `.h` `.cpp` `.hpp` `.rb` | The general checks |
 | **Env files** | `.env` `.env.local` `.env.production` ... | Real secrets in an env file git doesn't ignore (already committed, or the next `git add .` will be), leaked key formats, secrets behind `NEXT_PUBLIC_`/`VITE_` prefixes. A properly ignored `.env` and `.env.example` placeholders stay quiet |
+| **Markdown docs** | `.md` `.mdx` `.markdown` | The docs rules above, on READMEs, root-level docs and anything under `docs/` or `.github/`. Blog posts and other Markdown content are left alone |
 
 **General checks** (every language above): elided code (`// ... existing code ...`), placeholder
 implementations, narrating and step-by-step comments, chatbot voice in comments, leaked keys and hardcoded
@@ -284,6 +291,10 @@ On a pinned corpus of 9 AI-built apps and 4 hand-built repos, **95% of findings 
 hand-reviewed sample of 80, and AI-built apps averaged about 2× more findings per 1,000 lines. Method, raw labels,
 per-repo grades and limitations: [benchmarks/BENCHMARK.md](benchmarks/BENCHMARK.md). Reproduce with
 `python benchmarks/run.py`.
+
+Docs rules were checked separately on 130 READMEs and 59 cloned repos: none of 20 well-known hand-written
+READMEs (React, Django, Vite, FastAPI...) was flagged, and every missing-script, dead-link and placeholder finding
+was correct on review. `docs/emoji-headings` is a style signal, not proof: some older human READMEs use it too.
 
 ## Slop score
 

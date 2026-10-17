@@ -81,12 +81,14 @@ CATEGORY_AI_SMELL = "Code Slop"
 CATEGORY_UI_SLOP = "UI Slop"
 CATEGORY_A11Y = "Accessibility"
 CATEGORY_DEPS = "Dependencies"
+CATEGORY_DOCS = "Docs Slop"
 
 # ─── Supported File Extensions ───────────────────────────────────────────────
 SUPPORTED_EXTENSIONS = {
     ".py", ".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs", ".mts", ".cts",
     ".vue", ".svelte", ".astro", ".html", ".htm",
     ".css", ".scss", ".sass", ".less",
+    ".md", ".mdx", ".markdown",
     ".go", ".rs", ".java", ".cpp", ".c", ".h", ".hpp",
     ".cs", ".rb", ".php", ".swift", ".kt", ".kts", ".scala", ".dart", ".groovy",
 }
