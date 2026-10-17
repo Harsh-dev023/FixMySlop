@@ -335,7 +335,33 @@ class UIApp:
             return read_snippet(base, query.get("file", ""), int(query.get("line") or 1))
         if path == "/api/brief":
             return {"text": self._brief(query.get("file") or None)}
+        if path == "/api/export":
+            return self._export(query.get("fmt", ""))
         raise FileNotFoundError(path)
+
+    _EXPORTS = {"pdf": "application/pdf", "md": "text/markdown", "html": "text/html", "csv": "text/csv",
+                "json": "application/json", "sarif": "application/sarif+json"}
+
+    def _export(self, fmt: str) -> dict:
+        """The latest scan as a downloadable file (the page turns it into a download)."""
+        import base64
+        import tempfile
+        from fixmyslop.core.report_builder import ReportBuilder
+        if fmt not in self._EXPORTS:
+            raise ValueError(f"Unknown export format: {fmt}")
+        if not self.state.last:
+            raise ValueError("Scan the project first")
+        report, _ = self.state.last
+        builder = ReportBuilder()
+        if fmt == "pdf":
+            with tempfile.TemporaryDirectory() as tmp:
+                out = Path(tmp) / "report.pdf"
+                builder.export_pdf(report, str(out))
+                data = out.read_bytes()
+        else:
+            data = builder.export(report, {"md": "markdown"}.get(fmt, fmt)).encode("utf-8")
+        name = f"fixmyslop-{Path(report.repo_path).name or 'report'}.{fmt}"
+        return {"name": name, "mime": self._EXPORTS[fmt], "base64": base64.b64encode(data).decode("ascii")}
 
     # POST ---------------------------------------------------------------------
     def post(self, path: str, body: dict) -> dict:

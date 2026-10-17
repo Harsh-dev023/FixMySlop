@@ -151,3 +151,18 @@ def test_snippet_works_for_a_subfolder_of_a_git_repo(tmp_path):
     assert issue["file"] == "apps/web/Hero.tsx"
     snippet = ui.get("/api/snippet", {"file": issue["file"], "line": str(issue["line"])})
     assert any("from-purple-600" in line for line in snippet["lines"])
+
+
+def test_export_every_format_from_the_app(server):
+    import base64
+    app, base = server
+    assert call(base + "/api/export?fmt=pdf", token=app.token)[0] == 400          # scan first
+    call(base + "/api/scan", token=app.token, body={"static": False})
+    for fmt, marker in (("pdf", b"%PDF-1.4"), ("md", b"# FixMySlop report"), ("html", b"<!DOCTYPE html>"),
+                        ("csv", b"Severity,"), ("json", b'"issues"'), ("sarif", b'"version": "2.1.0"')):
+        status, body, _ = call(base + f"/api/export?fmt={fmt}", token=app.token)
+        file = json.loads(body)
+        assert status == 200 and file["name"].endswith("." + fmt)
+        assert marker in base64.b64decode(file["base64"]), fmt
+    assert call(base + "/api/export?fmt=exe", token=app.token)[0] == 400
+    assert call(base + "/api/export?fmt=pdf")[0] == 403                           # token required

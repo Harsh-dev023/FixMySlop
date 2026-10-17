@@ -3,6 +3,17 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); while in 0.x, minor versions may
 include breaking changes.
 
+## 0.6.5
+
+**Reports you can hand to someone**
+- PDF export rebuilt with a built-in writer: no extra installs. Before, it needed `fpdf2`; without it, `report.pdf`
+  silently got HTML inside. The PDF now has the score, summary by category and rule, findings grouped by file with
+  evidence, and how to fix each rule.
+- Markdown export restructured the same way (summary tables, grouped by file, each fix stated once).
+- **Export menu** in the HTML report (PDF via print, Markdown, CSV, JSON; respects the current filters) and in the
+  app's Overview (PDF, Markdown, HTML, CSV, JSON, SARIF).
+- Shared reports show the project name instead of the full local path.
+
 ## 0.6.4
 
 - **Code shown to users isn't treated as code.** In JS/TS, the contents of multi-line template strings (API
