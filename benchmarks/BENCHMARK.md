@@ -36,13 +36,13 @@ generated files, and shadcn `asChild` buttons. Each became a fix plus a regressi
 
 | Repo | Group | Score | Grade | Issues | Lines |
 |---|---|---|---|---|---|
-| clippr-v2-lovable | AI | 25.7 | C | 526 | 65,133 |
-| dl-life-canvas | AI | 21.5 | B | 61 | 11,444 |
-| aura-wardrobe-intelligence | AI | 13.5 | B | 263 | 67,884 |
-| municipal-connect | AI | 8.8 | A | 19 | 9,276 |
-| leadmachine-leadcatch-lovable | AI | 5.9 | A | 45 | 19,969 |
+| clippr-v2-lovable | AI | 25.7 | C | 526 | 65,145 |
+| dl-life-canvas | AI | 21.5 | B | 61 | 11,446 |
+| aura-wardrobe-intelligence | AI | 13.4 | B | 263 | 67,890 |
+| municipal-connect | AI | 8.7 | A | 19 | 9,352 |
+| leadmachine-leadcatch-lovable | AI | 5.9 | A | 45 | 20,013 |
 | lumina-lovable-concept | AI | 4.8 | A | 11 | 8,593 |
-| usama-showcase-sparkle | AI | 4.3 | A | 30 | 27,899 |
+| usama-showcase-sparkle | AI | 4.3 | A | 30 | 27,914 |
 | money-kalkulacka | AI | 1.5 | A | 4 | 10,818 |
 | lovable-portfoilo | AI | 0.0 | A | 0 | 6,182 |
 | commerce | hand | 9.4 | A | 12 | 3,559 |
