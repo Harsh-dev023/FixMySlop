@@ -430,6 +430,10 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
         h("p", { class: "muted", style: "margin-top:6px" }, `${plural(issues.length, r.baselined ? "new issue" : "issue")} · ${plural(r.files, "file")} · ${r.lines.toLocaleString()} lines · ${r.seconds}s · scanned at ${when(r.scannedAt)}`
           + (r.baselined ? ` · ${r.baselined} pre-existing hidden by baseline` : "")),
         delta && h("p", { style: "margin-top:2px" }, delta)),
+      issues.length ? h("select", { class: "btn", "aria-label": "Export report", onchange: exportReport },
+        h("option", { value: "" }, "Export report…"),
+        [["pdf", "PDF"], ["md", "Markdown"], ["html", "HTML (interactive)"], ["csv", "CSV"], ["json", "JSON"], ["sarif", "SARIF"]]
+          .map(([value, label]) => h("option", { value }, label))) : null,
     );
     if (!r.files) {
       return h("div", { class: "page" }, h("div", { class: "card card-pad empty" },
@@ -486,6 +490,19 @@ dialog::backdrop { background: rgba(0, 0, 0, 0.35); }
       toast(res.applied ? `Applied ${plural(res.applied, "fix")} in ${plural(res.files, "file")}` : "Nothing to fix safely");
     } catch (e) { toast(`Safe fixes failed: ${e.message}`); }
     state.scanning = false; renderStatus(); render();
+  }
+  async function exportReport(event) {
+    const fmt = event.target.value;
+    event.target.value = "";
+    if (!fmt) return;
+    try {
+      const file = await api(`/api/export?fmt=${fmt}`);
+      const bytes = Uint8Array.from(atob(file.base64), (c) => c.charCodeAt(0));
+      const a = h("a", { href: URL.createObjectURL(new Blob([bytes], { type: file.mime })), download: file.name });
+      document.body.append(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      toast(`Saved ${file.name} to your downloads`);
+    } catch (e) { toast(`Export failed: ${e.message}`); }
   }
   async function copyBriefAll() {
     try { copy((await api("/api/brief")).text, "Fix prompt copied. Paste it into your coding agent."); }

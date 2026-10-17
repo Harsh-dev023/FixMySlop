@@ -251,7 +251,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - uses: MrSpideyNihal/FixMySlop@v0.6.4
+      - uses: MrSpideyNihal/FixMySlop@v0.6.5
         with: { fail-on: high, changed-only: true }
 ```
 
@@ -260,7 +260,7 @@ Findings show up as inline PR annotations (SARIF). Also on the [GitHub Marketpla
 ```yaml
 repos:
   - repo: https://github.com/MrSpideyNihal/FixMySlop
-    rev: v0.6.4
+    rev: v0.6.5
     hooks: [{ id: fixmyslop }]
 ```
 
@@ -282,7 +282,17 @@ Skip a file: `fixmyslop-ignore-file` in its first lines. Paths passed explicitly
 ## Output formats
 
 `-f text` (default) · `compact` (one line per issue, for agents) · `prompt` (fix brief) · `sarif` · `json` ·
-`markdown` · `html` (a shareable single file with filters, search and "copy fix prompt" per file) · `csv` · `pdf`. Save with `-s report.html` (format inferred from the extension).
+`markdown` · `html` · `csv` · `pdf`. Save with `-s report.pdf` (format inferred from the extension).
+
+```bash
+fixmyslop scan -s report.pdf      # score, summary, findings by file, how to fix each rule (no extra installs)
+fixmyslop scan -s report.md       # same structure, for PRs, issues and docs
+fixmyslop scan --open             # interactive HTML report
+```
+
+The HTML report and the app (`fixmyslop ui`) both have an **Export** menu: PDF, Markdown, CSV, JSON (and HTML/SARIF
+in the app). Shared reports show the project name, never your local path.
+
 Exit codes: `0` clean, `1` issues at/above `--fail-on`, `2` usage error.
 
 ## How accurate is it?
