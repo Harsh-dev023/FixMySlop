@@ -557,6 +557,20 @@ def test_env_secret_in_a_file_git_will_commit(tmp_path):
                                         "DATABASE_URL=postgres://postgres:postgres@localhost:5432/dev\n")
 
 
+def test_env_public_by_design_keys_stay_quiet(tmp_path):
+    """Lovable/Supabase apps commit browser keys on purpose; that's not a leak."""
+    import subprocess
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    lovable = ('SUPABASE_PROJECT_ID="nwoxhqzlmabcdefghijk"\n'
+               'SUPABASE_PUBLISHABLE_KEY="sb_publishable_AbCdEfGhIjKlMnOpQrStUv"\n'
+               'VITE_SUPABASE_PUBLISHABLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.YW5vbg"\n'
+               'VITE_SUPABASE_URL="https://nwoxhqzlmabcdefghijk.supabase.co"\n'
+               'VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY="AIzaSyA1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q"\n')
+    found = scan(tmp_path, ".env", lovable)
+    assert "sec/env-secret" not in found and "sec/leaked-key" not in found
+    assert "sec/env-secret" in scan(tmp_path, ".env", lovable + "STRIPE_SECRET_KEY=rk_live_51HxyzAbcdEfgh\n")
+
+
 def test_env_files_are_scanned_and_public_secrets_flagged(tmp_path):
     from fixmyslop.core.scanner import Scanner
     found = scan(tmp_path, ".env.local", "NEXT_PUBLIC_OPENAI_API_KEY=sk-proj-abc\nNEXT_PUBLIC_SITE=https://x.dev\n")  # fixmyslop-ignore[sec/public-env-secret]: test fixture

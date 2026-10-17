@@ -47,6 +47,10 @@ def check_leaked_key(ctx: FileContext) -> Iterable[Hit]:
     """Flag provider key formats; evidence is redacted so reports never re-leak the key."""
     for n, line in enumerate(ctx.lines, 1):
         match = _LEAKED_KEY.search(line)
+        if match and KIND_ENV in ctx.kinds:
+            assign = _ENV_ASSIGN.match(line)
+            if assign and _PUBLIC_BY_DESIGN.search(assign.group(1)):
+                continue  # e.g. VITE_..._MAPS_BROWSER_KEY: a browser key, restricted by referrer
         if match:
             key = match.group(0)
             evidence = line.strip().replace(key, redact(key))
@@ -99,6 +103,17 @@ _ENV_ASSIGN = re.compile(r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?
 _ENV_SECRET_NAME = re.compile(
     r"key|secret|token|passw|pwd|credential|private|service_role|dsn|webhook", re.IGNORECASE)
 _URL_WITH_PASSWORD = re.compile(r"://[^:/@\s]+:[^@\s]+@(?!localhost|127\.0\.0\.1|0\.0\.0\.0|db\b|postgres\b)")
+# Shipped to the browser by design (Supabase anon/publishable keys, Stripe pk_, restricted Maps keys):
+# committing them leaks nothing. Real secrets behind a public prefix are sec/public-env-secret's job.
+_PUBLIC_BY_DESIGN = re.compile(
+    r"publishable|anon|browser|public_key|site_key|measurement_id|tracking_id|project_id", re.IGNORECASE)
+_PUBLIC_PREFIX = re.compile(r"^(?:NEXT_PUBLIC|VITE|REACT_APP|EXPO_PUBLIC|PUBLIC|NUXT_PUBLIC|GATSBY)_")
+_PUBLIC_VALUE = ("sb_publishable_", "pk_live_", "pk_test_")
+
+
+def _env_public(name: str, value: str) -> bool:
+    """An env var meant to be public: browser-prefixed, or named/shaped like a publishable key."""
+    return bool(_PUBLIC_PREFIX.match(name) or _PUBLIC_BY_DESIGN.search(name)) or value.startswith(_PUBLIC_VALUE)
 
 
 @rule(
@@ -118,7 +133,7 @@ def check_env_secret(ctx: FileContext) -> Iterable[Hit]:
         if not match or ctx.is_comment(n):
             continue
         name, value = match.group(1), match.group(2).strip("\"'")
-        if len(value) < 8 or _PLACEHOLDER_VALUE.search(value):
+        if len(value) < 8 or _PLACEHOLDER_VALUE.search(value) or _env_public(name, value):
             continue
         if _ENV_SECRET_NAME.search(name) or _URL_WITH_PASSWORD.search(value):
             secrets.append((n, name))

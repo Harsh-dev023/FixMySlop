@@ -45,9 +45,9 @@ generated files, and shadcn `asChild` buttons. Each became a fix plus a regressi
 | usama-showcase-sparkle | AI | 4.3 | A | 30 | 27,899 |
 | money-kalkulacka | AI | 1.5 | A | 4 | 10,818 |
 | lovable-portfoilo | AI | 0.0 | A | 0 | 6,182 |
-| commerce | hand | 9.4 | A | 12 | 3,554 |
-| taxonomy | hand | 5.9 | A | 13 | 7,148 |
-| saas-starter | hand | 3.0 | A | 4 | 3,488 |
+| commerce | hand | 9.4 | A | 12 | 3,559 |
+| taxonomy | hand | 5.8 | A | 13 | 7,177 |
+| saas-starter | hand | 3.0 | A | 4 | 3,495 |
 | next-template | hand | 0.0 | A | 0 | 510 |
 
 - AI-built apps: **4.2 findings per 1,000 lines**; hand-built: **2.0** — about 2× more.
