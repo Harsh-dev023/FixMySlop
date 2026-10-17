@@ -14,6 +14,11 @@ include breaking changes.
   FastAPI...) flagged; all 28 missing-script, dead-link and placeholder findings in the cloned repos were correct
   on review. Emoji headings are the weakest signal (some older human READMEs use them too), so they're LOW.
 
+**Fix brief**: a "Production bar" section. Every fix must be production-grade (real error handling, accessible,
+no committed secrets, dead duplicates deleted), the agent runs the project's type check, lint, tests and build
+before and after, and reports pre-existing failures instead of hiding them. Scoped to the listed items: no rewrites.
+Plus a "Docs direction" section when docs/* issues are present.
+
 Tested against [metacall/deploy](https://github.com/metacall/deploy) (main plus all 201 PRs), a hand-written
 TypeScript CLI. It found 29 false positives, all fixed:
 - `slop/empty-test` understands functions imported from assertion libraries
