@@ -11,7 +11,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable, Optional
 
-from fixmyslop.macros import is_env_file
+from fixmyslop.macros import is_env_file, CATEGORY_UI_SLOP, CATEGORY_A11Y
 
 # ─── File kinds ──────────────────────────────────────────────────────────────
 # A file can have several kinds (a .tsx file is script + markup).
@@ -84,6 +84,85 @@ class Hit:
     severity: str = ""      # overrides the rule's default severity when set
 
 
+# A `/` starts a regex literal (not division) after an operator, opening bracket or keyword.
+# Not after < or >: in JSX those are tags (</p>, />), not comparisons.
+_REGEX_CAN_START = re.compile(r"(?:[(,=:\[!&|?{};+\-*%~^]|\breturn|\btypeof|^)\s*$")
+
+
+def mask_multiline_templates(text: str) -> str:
+    """Blank the contents of JS/TS template literals that span lines, keeping offsets and newlines.
+
+    `const sample = \\`import x from 'pkg'\\n...\\`` is text shown to users, not an import. Single-line
+    templates (`\\`px-${pad}\\``) are left alone. Comments and quoted strings are skipped so a backtick
+    inside them doesn't open a template.
+    """
+    out = list(text)
+    n = len(text)
+    i = 0
+    stack: list[list] = []   # frames: ["tpl", start] or ["expr", brace_depth]
+
+    def close_template(start: int, end: int) -> None:
+        if "\n" in text[start:end]:
+            for k in range(start + 1, end):
+                if out[k] != "\n":
+                    out[k] = " "
+
+    while i < n:
+        c = text[i]
+        frame = stack[-1] if stack else None
+        if frame is not None and frame[0] == "tpl":
+            if c == "\\":
+                i += 2
+                continue
+            if c == "`":
+                stack.pop()
+                close_template(frame[1], i)
+            elif c == "$" and text.startswith("${", i):
+                stack.append(["expr", 0])
+                i += 2
+                continue
+            i += 1
+            continue
+        # code (top level or inside ${ ... })
+        if c == "/" and text.startswith("//", i):
+            end = text.find("\n", i)
+            i = n if end < 0 else end
+            continue
+        if c == "/" and text.startswith("/*", i):
+            end = text.find("*/", i + 2)
+            i = n if end < 0 else end + 2
+            continue
+        if c in "'\"":
+            j = i + 1
+            while j < n and text[j] != c and text[j] != "\n":
+                j += 2 if text[j] == "\\" else 1
+            i = j + 1
+            continue
+        if c == "/" and _REGEX_CAN_START.search(text, max(0, i - 12), i):
+            j, in_class = i + 1, False   # regex literal: /"/g must not open a string
+            while j < n and text[j] != "\n" and (in_class or text[j] != "/"):
+                if text[j] == "\\":
+                    j += 1
+                elif text[j] == "[":
+                    in_class = True
+                elif text[j] == "]":
+                    in_class = False
+                j += 1
+            i = j + 1
+            continue
+        if c == "`":
+            stack.append(["tpl", i])
+        elif frame is not None and c == "{":
+            frame[1] += 1
+        elif frame is not None and c == "}":
+            if frame[1] == 0:
+                stack.pop()
+            else:
+                frame[1] -= 1
+        i += 1
+    return "".join(out)
+
+
 class FileContext:
     """Everything a rule needs to know about one file."""
 
@@ -98,6 +177,10 @@ class FileContext:
         self.is_test = bool(TEST_PATH_RE.search(self.rel))
         self.project = project
         self._line_starts = [0] + [m.end() for m in re.finditer("\n", text)]
+        # Code rules read code_text/code_lines: in JS/TS, multi-line template strings (code samples shown
+        # in the UI, HTML/SQL templates) are blanked out so their contents aren't mistaken for real code.
+        self.code_text = mask_multiline_templates(text) if KIND_SCRIPT in self.kinds else text
+        self.code_lines = self.code_text.splitlines() if self.code_text is not text else self.lines
         self.comment_lines = self._find_comment_lines()
 
     def _find_comment_lines(self) -> set[int]:
@@ -108,7 +191,7 @@ class FileContext:
         is_doc = KIND_DOC in self.kinds        # Markdown: only <!-- --> is a comment (# is a heading)
         in_block = False
         in_html = False
-        for n, line in enumerate(self.lines, 1):
+        for n, line in enumerate(self.code_lines, 1):
             stripped = line.strip()
             if in_html:
                 result.add(n)
@@ -210,9 +293,10 @@ def line_rule(id: str, title: str, severity: str, category: str, kinds: Iterable
     """
     regex = re.compile(pattern, flags)
     shield = re.compile(unless_inside, re.IGNORECASE) if unless_inside else None
+    reads_markup = category in (CATEGORY_UI_SLOP, CATEGORY_A11Y)   # class strings live in templates too
 
     def check(ctx: FileContext) -> Iterable[Hit]:
-        for n, line in enumerate(ctx.lines, 1):
+        for n, line in enumerate(ctx.lines if reads_markup else ctx.code_lines, 1):
             is_comment = ctx.is_comment(n)
             if scope == "code" and is_comment:
                 continue

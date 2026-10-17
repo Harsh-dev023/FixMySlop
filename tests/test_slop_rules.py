@@ -579,3 +579,8 @@ def test_env_files_are_scanned_and_public_secrets_flagged(tmp_path):
     assert ".env.local" in names
     (tmp_path / "env.ts").write_text("export const env = {}\n", encoding="utf-8")
     assert "slop/elided-code" not in scan(tmp_path, "env.ts", "export const env = {}\n")
+
+
+def test_placeholder_keep_it_simple_for_now(tmp_path):
+    code = "export function windowName() {\n  // Native bindings would give the real window; keeping it simple for now\n  return 'Desktop';\n}\n"
+    assert "slop/placeholder-impl" in scan(tmp_path, "src/window.ts", code)

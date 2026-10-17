@@ -459,7 +459,7 @@ def _js_imports(ctx: FileContext, index: DependencyIndex) -> list[tuple[str, str
     """Classify bare-specifier imports in a JS/TS file."""
     seen: set[str] = set()
     results = []
-    for match in _JS_IMPORT.finditer(ctx.text):
+    for match in _JS_IMPORT.finditer(ctx.code_text):
         line = ctx.line_of(match.start(1))
         if ctx.is_comment(line):
             continue
