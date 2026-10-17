@@ -85,9 +85,32 @@ _JS_HELPER = re.compile(r"\b(?:const|let|function)\s+(\w+)\s*(?:=\s*(?:async\s*)
                         r"([^\n]*)")
 
 
+_ASSERT_MODULES = r"(?:node:)?assert(?:/strict)?|chai|power-assert|expect|@jest/globals|vitest|uvu/assert|tap|ava"
+_IMPORTED_NAMES = re.compile(
+    r"import\s*\{([^}]*)\}\s*from\s*['\"](?:" + _ASSERT_MODULES + r")['\"]"
+    r"|(?:const|let|var)\s*\{([^}]*)\}\s*=\s*require\(\s*['\"](?:" + _ASSERT_MODULES + r")['\"]\s*\)"
+    r"|import\s+(\w+)\s+from\s*['\"](?:" + _ASSERT_MODULES + r")['\"]"
+    r"|import\s*\*\s*as\s+(\w+)\s+from\s*['\"](?:" + _ASSERT_MODULES + r")['\"]")
+
+
+def _js_imported_asserts(text: str) -> set:
+    """Functions imported from assertion libraries: `import { ok, strictEqual } from 'assert'`."""
+    names = set()
+    for match in _IMPORTED_NAMES.finditer(text):
+        group = match.group(1) or match.group(2)
+        if group:
+            for part in group.split(","):
+                alias = part.strip().split(" as ")[-1].split(":")[-1].strip()
+                if re.fullmatch(r"\w+", alias or ""):
+                    names.add(alias)
+        else:
+            names.add(match.group(3) or match.group(4))
+    return {n for n in names if n not in ("describe", "it", "test", "beforeEach", "afterEach", "vi", "jest")}
+
+
 def _js_assert_helpers(text: str) -> set:
     """Local helpers whose definition asserts (`const close = (a, b) => assert.ok(...)`)."""
-    helpers = set()
+    helpers = _js_imported_asserts(text)
     for match in _JS_HELPER.finditer(text):
         rest = match.group(2)
         if rest.rstrip().endswith("{"):
@@ -312,10 +335,10 @@ def _only_in(rule_id: str, extensions: set):
 
 
 _BRACE_LANGS = {".js", ".mjs", ".cjs", ".ts", ".mts", ".cts", ".jsx", ".tsx", ".vue", ".svelte", ".astro",
-                ".java", ".cs", ".kt", ".swift", ".php", ".scala", ".dart"}
+                ".java", ".cs", ".kt", ".kts", ".swift", ".php", ".scala", ".dart", ".groovy"}
 # Empty catch blocks look the same in Java, C#, Kotlin, Swift, PHP, Dart and JS.
 RULES["slop/empty-catch"].kinds = frozenset({KIND_CODE})
 _only_in("slop/empty-catch", _BRACE_LANGS)
-_only_in("slop/print-stacktrace", {".java", ".kt", ".scala", ".groovy"})
+_only_in("slop/print-stacktrace", {".java", ".kt", ".kts", ".groovy"})
 _only_in("slop/ignored-error", {".go"})
 assert isinstance(RULES["slop/empty-catch"], Rule)

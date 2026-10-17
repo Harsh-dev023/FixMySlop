@@ -19,7 +19,7 @@ from rich.markup import escape
 from fixmyslop.macros import (
     APP_NAME, APP_VERSION, DEFAULT_MODEL, DEFAULT_BASE_URL, DEFAULT_API_KEY,
     SCAN_MODE_TURBO, SCAN_MODE_DEEP, DEFAULT_SCAN_MODE, SEVERITY_RANK,
-    REPORT_FORMAT_TEXT, REPORT_FORMAT_PDF, SUPPORTED_EXTENSIONS,
+    REPORT_FORMAT_TEXT, REPORT_FORMAT_PDF, is_scannable,
 )
 from fixmyslop.cli.cli_output import (
     console, print_banner, print_report, print_error, print_success, print_info,
@@ -497,7 +497,7 @@ def hook(
         path = Path(raw_path)
         if not path.is_absolute():
             path = cwd / path
-        if not path.is_file() or path.suffix.lower() not in SUPPORTED_EXTENSIONS:
+        if not path.is_file() or not is_scannable(path):
             continue
         root = git_root(path) or path.parent
         config = load_config(root)

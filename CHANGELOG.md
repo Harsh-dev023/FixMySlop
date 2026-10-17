@@ -3,6 +3,42 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); while in 0.x, minor versions may
 include breaking changes.
 
+## 0.6.3
+
+**Docs slop (new)**: READMEs and Markdown docs are scanned (`.md`, `.mdx`; READMEs, root-level docs, `docs/`, `.github/`).
+- Checked against the repo: `docs/missing-script` (`npm run test` with no such script), `docs/dead-link` (links
+  and images to missing files, a LICENSE that isn't there), `docs/placeholder` (`github.com/yourusername/...`), <!-- fixmyslop-ignore[docs/placeholder]: example -->
+  `docs/chatbot-residue` ("Certainly! Here's a comprehensive README", "[Insert screenshot here]").
+- Style: `docs/emoji-headings` (emoji on most headings) and `docs/hype-copy` (three or more hype phrases).
+- Calibrated on 130 READMEs and 59 cloned repos: 0 of 20 well-known hand-written READMEs (React, Django, Vite,
+  FastAPI...) flagged; all 28 missing-script, dead-link and placeholder findings in the cloned repos were correct
+  on review. Emoji headings are the weakest signal (some older human READMEs use them too), so they're LOW.
+
+**Fix brief**: a "Production bar" section. Every fix must be production-grade (real error handling, accessible,
+no committed secrets, dead duplicates deleted), the agent runs the project's type check, lint, tests and build
+before and after, and reports pre-existing failures instead of hiding them. Scoped to the listed items: no rewrites.
+Plus a "Docs direction" section when docs/* issues are present.
+
+Tested against [metacall/deploy](https://github.com/metacall/deploy) (main plus all 201 PRs), a hand-written
+TypeScript CLI. It found 29 false positives, all fixed:
+- `slop/empty-test` understands functions imported from assertion libraries
+  (`import { ok, strictEqual } from 'assert'`, chai, `node:assert/strict`, vitest, ...).
+- `slop/elided-code` no longer flags a bare `// ...` inside commented-out code; it still flags one that
+  stands in for code between real lines.
+- `slop/placeholder-impl` no longer treats a plain `TODO: implement X` as AI hedging.
+
+**Env files**
+- `.env`, `.env.local`, `.env.production`... are now scanned. New `sec/env-secret`: real secret values in an env
+  file git doesn't ignore (already committed, or the next `git add .` will commit it). A gitignored `.env` and
+  `.env.example` placeholders stay quiet; local dev URLs (`localhost`) don't count.
+- `sec/public-env-secret` and `sec/leaked-key` also run on env files (`NEXT_PUBLIC_OPENAI_API_KEY=...`).
+
+**Languages**
+- Now scanned: Scala, Dart, Groovy, Kotlin scripts (`.kts`) and C/C++ headers. Some rules already mentioned
+  these languages, but their files were never picked up.
+- Ruby `#` comments are recognized, so comment checks (elided code, narrating comments) work in `.rb` files.
+- README: new "Supported languages" table (what runs for each language) and "What it can't catch".
+
 ## 0.6.2
 - `--online` package checks no longer download full registry metadata (multi-MB for popular npm packages), which could time out and silently skip the check; one retry on network errors.
 

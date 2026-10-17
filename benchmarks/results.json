@@ -2,10 +2,10 @@
  {
   "group": "ai",
   "name": "aura-wardrobe-intelligence",
-  "score": 13.5,
+  "score": 13.4,
   "grade": "B",
   "issues": 263,
-  "lines": 67884,
+  "lines": 67890,
   "rules": {
    "a11y/focus-removed": 85,
    "ui/eyebrow-labels": 43,
@@ -27,7 +27,7 @@
   "score": 25.7,
   "grade": "C",
   "issues": 526,
-  "lines": 65133,
+  "lines": 65145,
   "rules": {
    "a11y/focus-removed": 6,
    "ui/z-index-war": 15,
@@ -63,7 +63,7 @@
   "score": 21.5,
   "grade": "B",
   "issues": 61,
-  "lines": 11444,
+  "lines": 11446,
   "rules": {
    "a11y/focus-removed": 40,
    "ui/eyebrow-labels": 8,
@@ -77,10 +77,10 @@
  {
   "group": "ai",
   "name": "municipal-connect",
-  "score": 8.8,
+  "score": 8.7,
   "grade": "A",
   "issues": 19,
-  "lines": 9276,
+  "lines": 9352,
   "rules": {
    "sec/sql-injection": 2,
    "a11y/icon-button": 7,
@@ -96,7 +96,7 @@
   "score": 5.9,
   "grade": "A",
   "issues": 45,
-  "lines": 19969,
+  "lines": 20013,
   "rules": {
    "deps/phantom-import": 1,
    "slop/empty-catch": 2,
@@ -149,7 +149,7 @@
   "score": 4.3,
   "grade": "A",
   "issues": 30,
-  "lines": 27899,
+  "lines": 27914,
   "rules": {
    "sec/sql-injection": 1,
    "ui/gimmick-animation": 4,
@@ -173,7 +173,7 @@
   "score": 9.4,
   "grade": "A",
   "issues": 12,
-  "lines": 3554,
+  "lines": 3559,
   "rules": {
    "sec/raw-html": 2,
    "a11y/clickable-div": 2,
@@ -197,7 +197,7 @@
   "score": 3.0,
   "grade": "A",
   "issues": 4,
-  "lines": 3488,
+  "lines": 3495,
   "rules": {
    "ui/marketing-slop": 1,
    "ui/two-tone-headline": 1,
@@ -208,14 +208,14 @@
  {
   "group": "hand",
   "name": "taxonomy",
-  "score": 6.5,
+  "score": 5.8,
   "grade": "A",
-  "issues": 14,
-  "lines": 7148,
+  "issues": 13,
+  "lines": 7177,
   "rules": {
-   "slop/placeholder-impl": 2,
    "slop/narrating-comment": 5,
    "a11y/focus-removed": 3,
+   "slop/placeholder-impl": 1,
    "slop/blanket-suppression": 2,
    "ui/default-font": 1,
    "ui/off-scale-values": 1

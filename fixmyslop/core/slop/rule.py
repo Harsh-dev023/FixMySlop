@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable, Optional
 
+from fixmyslop.macros import is_env_file
+
 # ─── File kinds ──────────────────────────────────────────────────────────────
 # A file can have several kinds (a .tsx file is script + markup).
 KIND_PYTHON = "python"
@@ -19,6 +21,8 @@ KIND_TS = "ts"
 KIND_MARKUP = "markup"      # renders UI: html, jsx, tsx, vue, svelte, astro
 KIND_STYLE = "style"        # css family (or files with <style> blocks)
 KIND_CODE = "code"          # any programming language
+KIND_DOC = "doc"           # Markdown docs
+KIND_ENV = "env"           # .env files
 KIND_ANY = "any"
 
 _EXT_KINDS = {
@@ -40,6 +44,9 @@ _EXT_KINDS = {
     ".scss": {KIND_STYLE},
     ".sass": {KIND_STYLE},
     ".less": {KIND_STYLE},
+    ".md": {KIND_DOC},
+    ".mdx": {KIND_DOC},
+    ".markdown": {KIND_DOC},
 }
 
 
@@ -59,6 +66,7 @@ TEST_PATH_RE = re.compile(
 )
 
 # Whole-line comment openers per family.
+_HASH_LANGS = {".rb"}            # code languages whose comments start with #
 _HASH_COMMENT = re.compile(r"^\s*#(?!!)")
 _SLASH_COMMENT = re.compile(r"^\s*(//|\{/\*|\*(?=\s|$)|/\*)")
 _HTML_COMMENT_OPEN = "<!--"
@@ -86,7 +94,7 @@ class FileContext:
         self.text = text
         self.lines = text.splitlines()
         self.ext = path.suffix.lower()
-        self.kinds = kinds_for(self.ext)
+        self.kinds = frozenset({KIND_ENV, KIND_ANY}) if is_env_file(path.name) else kinds_for(self.ext)
         self.is_test = bool(TEST_PATH_RE.search(self.rel))
         self.project = project
         self._line_starts = [0] + [m.end() for m in re.finditer("\n", text)]
@@ -95,7 +103,9 @@ class FileContext:
     def _find_comment_lines(self) -> set[int]:
         """Return 1-based numbers of lines that are entirely comments."""
         result: set[int] = set()
-        is_python = KIND_PYTHON in self.kinds
+        is_python = (KIND_PYTHON in self.kinds or KIND_ENV in self.kinds
+                     or self.path.suffix.lower() in _HASH_LANGS)
+        is_doc = KIND_DOC in self.kinds        # Markdown: only <!-- --> is a comment (# is a heading)
         in_block = False
         in_html = False
         for n, line in enumerate(self.lines, 1):
@@ -114,6 +124,8 @@ class FileContext:
                 result.add(n)
                 if _HTML_COMMENT_CLOSE not in stripped:
                     in_html = True
+                continue
+            if is_doc:
                 continue
             if is_python:
                 if _HASH_COMMENT.match(line):

@@ -497,3 +497,85 @@ def test_registry_lookup_streams_and_retries(monkeypatch, tmp_path):
     assert index.exists_on_registry("requests", "pypi") is True
     assert all(stream for _, stream in calls)
     assert any("pypi.org/simple/requests" in url for url, _ in calls)
+
+
+def test_metacall_false_positives_stay_fixed(tmp_path):
+    """Found scanning metacall/deploy: hand-written code that must not be flagged."""
+    js = ("import { ok, strictEqual as eq } from 'assert';\n"
+          "describe('deploy', () => {\n"
+          "  it('parses args', () => {\n"
+          "    const args = parse(['--dev']);\n"
+          "    eq(args.dev, true);\n"
+          "  });\n"
+          "  it('works', () => { ok(run()); });\n"
+          "});\n")
+    assert "slop/empty-test" not in scan(tmp_path / "a", "src/test/cli.spec.ts", js)
+
+    commented = ("const main = () => {\n"
+                 "  run();\n"
+                 "};\n"
+                 "// const old = () => {\n"
+                 "// ...\n"
+                 "// };\n"
+                 "main();\n")
+    assert "slop/elided-code" not in scan(tmp_path / "b", "hooks/pre-push.js", commented)
+
+    elided = "function save() {\n  validate();\n  // ...\n  persist();\n}\n"
+    assert "slop/elided-code" in scan(tmp_path / "c", "src/save.js", elided)
+
+    todo = "export async function poll() {\n  // TODO: Implement polling with waitFor\n  return fetchStatus();\n}\n"
+    assert "slop/placeholder-impl" not in scan(tmp_path / "d", "src/logs.ts", todo)
+
+
+def test_more_languages_are_scanned(tmp_path):
+    ruby = "def total(items)\n  sum = 0\n  # ... existing code ...\n  sum\nend\n"
+    assert "slop/elided-code" in scan(tmp_path / "rb", "lib/total.rb", ruby)
+    dart = "void load() {\n  try {\n    fetch();\n  } catch (e) {}\n}\n"
+    assert "slop/empty-catch" in scan(tmp_path / "dart", "lib/load.dart", dart)
+    groovy = "def load() {\n  try { run() } catch (Exception e) { e.printStackTrace() }\n}\n"
+    assert "slop/print-stacktrace" in scan(tmp_path / "groovy", "src/Load.groovy", groovy)
+
+
+ENV = ("# Supabase\n"
+       "SUPABASE_URL=https://abcd.supabase.co\n"
+       "SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.c2VydmljZV9yb2xl\n"
+       "DATABASE_URL=postgres://admin:hunter2pass@db.example-prod.io:5432/app\n"
+       "PORT=3000\n")
+
+
+def test_env_secret_in_a_file_git_will_commit(tmp_path):
+    import subprocess
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    assert "sec/env-secret" in scan(tmp_path, ".env", ENV)
+    # ignored by git: the normal, safe setup
+    (tmp_path / ".gitignore").write_text(".env*\n!.env.example\n", encoding="utf-8")
+    assert "sec/env-secret" not in scan(tmp_path, ".env", ENV)
+    # templates hold placeholders and are meant to be committed
+    template = "OPENAI_API_KEY=your-openai-key\nDATABASE_URL=postgres://user:pass@localhost:5432/app\n"
+    assert "sec/env-secret" not in scan(tmp_path, ".env.example", template)
+    assert "sec/env-secret" not in scan(tmp_path / "local", ".env",
+                                        "DATABASE_URL=postgres://postgres:postgres@localhost:5432/dev\n")
+
+
+def test_env_public_by_design_keys_stay_quiet(tmp_path):
+    """Lovable/Supabase apps commit browser keys on purpose; that's not a leak."""
+    import subprocess
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    lovable = ('SUPABASE_PROJECT_ID="nwoxhqzlmabcdefghijk"\n'
+               'SUPABASE_PUBLISHABLE_KEY="sb_publishable_AbCdEfGhIjKlMnOpQrStUv"\n'
+               'VITE_SUPABASE_PUBLISHABLE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.YW5vbg"\n'
+               'VITE_SUPABASE_URL="https://nwoxhqzlmabcdefghijk.supabase.co"\n'
+               'VITE_LOVABLE_CONNECTOR_GOOGLE_MAPS_BROWSER_KEY="AIzaSyA1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q"\n')
+    found = scan(tmp_path, ".env", lovable)
+    assert "sec/env-secret" not in found and "sec/leaked-key" not in found
+    assert "sec/env-secret" in scan(tmp_path, ".env", lovable + "STRIPE_SECRET_KEY=rk_live_51HxyzAbcdEfgh\n")
+
+
+def test_env_files_are_scanned_and_public_secrets_flagged(tmp_path):
+    from fixmyslop.core.scanner import Scanner
+    found = scan(tmp_path, ".env.local", "NEXT_PUBLIC_OPENAI_API_KEY=sk-proj-abc\nNEXT_PUBLIC_SITE=https://x.dev\n")  # fixmyslop-ignore[sec/public-env-secret]: test fixture
+    assert "sec/public-env-secret" in found
+    names = {p.name for p in Scanner(str(tmp_path)).files()}
+    assert ".env.local" in names
+    (tmp_path / "env.ts").write_text("export const env = {}\n", encoding="utf-8")
+    assert "slop/elided-code" not in scan(tmp_path, "env.ts", "export const env = {}\n")

@@ -5,7 +5,7 @@ respects .gitignore, skips binary, minified, generated and oversized files.
 import fnmatch
 from pathlib import Path
 from typing import Iterator, Callable, Optional, Iterable
-from fixmyslop.macros import SUPPORTED_EXTENSIONS, DEFAULT_MAX_FILE_SIZE_KB
+from fixmyslop.macros import SUPPORTED_EXTENSIONS, DEFAULT_MAX_FILE_SIZE_KB, is_scannable
 from fixmyslop.utils.file_utils import read_file_safe, parse_gitignore
 from fixmyslop.utils.git_utils import list_files
 from fixmyslop.utils.logger import get_logger
@@ -86,7 +86,7 @@ class Scanner:
         """Filter by skip dirs, extension, generated-file patterns and size."""
         if any(part in self.SKIP_DIRS for part in rel_parts[:-1]):
             return False
-        if item.suffix.lower() not in self.extensions:
+        if not is_scannable(item, self.extensions):
             return False
         if any(fnmatch.fnmatch(item.name, pattern) for pattern in self.SKIP_FILE_PATTERNS):
             return False
@@ -113,7 +113,7 @@ class Scanner:
 
         if self._is_single_file:
             path = self.repo_path
-            if path.suffix.lower() in self.extensions:
+            if is_scannable(path, self.extensions):
                 try:
                     if path.stat().st_size <= self.max_file_size_kb * 1024:
                         yield path

@@ -60,6 +60,7 @@ def test_brief_lists_issues_with_fix_hints(tmp_path):
     assert "## UI direction" in brief
     assert "Hero.tsx" in brief and "ui/ai-gradient" in brief
     assert "How to fix each rule" in brief
+    assert "## Production bar" in brief and "before and after your changes" in brief
 
 
 def test_sarif_export(tmp_path):
