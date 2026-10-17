@@ -132,7 +132,7 @@ packages are what [slopsquatting](https://en.wikipedia.org/wiki/Slopsquatting) a
 `--online` confirms against PyPI / npm. `deps/undeclared-import`: works on your machine, breaks in CI.
 
 **Security** — `sec/leaked-key` (OpenAI/Anthropic/AWS/GitHub/Stripe/Google key formats, private keys — always
-redacted in output), `sec/public-env-secret` (`NEXT_PUBLIC_*SECRET*`, `VITE_*OPENAI*`), `sec/hardcoded-credential`,
+redacted in output), `sec/env-secret` (a `.env` with real keys that git will commit), `sec/public-env-secret` (`NEXT_PUBLIC_*SECRET*`, `VITE_*OPENAI*`), `sec/hardcoded-credential`,
 `sec/sql-injection`, `sec/cors-wildcard`, `sec/tls-disabled`, `sec/raw-html`, `sec/eval`
 
 Plus Ruff, Bandit and Semgrep findings when installed. `fixmyslop rules` lists everything;
@@ -153,6 +153,7 @@ checks that look the same in any syntax.
 | **Java, Kotlin, Groovy** | `.java` `.kt` `.kts` `.groovy` | Empty `catch`, `printStackTrace()`-only handlers, plus the general checks |
 | **C#, Swift, PHP, Scala, Dart** | `.cs` `.swift` `.php` `.scala` `.dart` | Empty `catch` plus the general checks |
 | **Rust, C, C++, Ruby** | `.rs` `.c` `.h` `.cpp` `.hpp` `.rb` | The general checks |
+| **Env files** | `.env` `.env.local` `.env.production` ... | Real secrets in an env file git doesn't ignore (already committed, or the next `git add .` will be), leaked key formats, secrets behind `NEXT_PUBLIC_`/`VITE_` prefixes. A properly ignored `.env` and `.env.example` placeholders stay quiet |
 
 **General checks** (every language above): elided code (`// ... existing code ...`), placeholder
 implementations, narrating and step-by-step comments, chatbot voice in comments, leaked keys and hardcoded

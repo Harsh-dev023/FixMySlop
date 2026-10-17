@@ -91,6 +91,27 @@ SUPPORTED_EXTENSIONS = {
     ".cs", ".rb", ".php", ".swift", ".kt", ".kts", ".scala", ".dart", ".groovy",
 }
 
+ENV_TEMPLATE_SUFFIXES = (".example", ".sample", ".template", ".dist", ".defaults")
+
+
+def is_env_file(name: str) -> bool:
+    """`.env`, `.env.local`, `.env.production`, `prod.env` (not `env.ts` or `.env.d.ts`)."""
+    lower = name.lower()
+    if Path(lower).suffix in SUPPORTED_EXTENSIONS:
+        return False
+    return lower == ".env" or lower.startswith(".env.") or lower.endswith(".env")
+
+
+def is_env_template(name: str) -> bool:
+    """`.env.example` and friends: meant to be committed, with placeholder values."""
+    return name.lower().endswith(ENV_TEMPLATE_SUFFIXES)
+
+
+def is_scannable(path: Path, extensions=None) -> bool:
+    """A file FixMySlop reads: a supported source extension or an env file."""
+    return path.suffix.lower() in (extensions or SUPPORTED_EXTENSIONS) or is_env_file(path.name)
+
+
 # Severity threshold names accepted by --fail-on / --min-severity
 SEVERITY_RANK = {
     SEVERITY_CRITICAL: 0, SEVERITY_HIGH: 1, SEVERITY_MEDIUM: 2,

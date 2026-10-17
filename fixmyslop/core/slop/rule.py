@@ -11,6 +11,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, Iterable, Optional
 
+from fixmyslop.macros import is_env_file
+
 # ─── File kinds ──────────────────────────────────────────────────────────────
 # A file can have several kinds (a .tsx file is script + markup).
 KIND_PYTHON = "python"
@@ -19,6 +21,7 @@ KIND_TS = "ts"
 KIND_MARKUP = "markup"      # renders UI: html, jsx, tsx, vue, svelte, astro
 KIND_STYLE = "style"        # css family (or files with <style> blocks)
 KIND_CODE = "code"          # any programming language
+KIND_ENV = "env"           # .env files
 KIND_ANY = "any"
 
 _EXT_KINDS = {
@@ -87,7 +90,7 @@ class FileContext:
         self.text = text
         self.lines = text.splitlines()
         self.ext = path.suffix.lower()
-        self.kinds = kinds_for(self.ext)
+        self.kinds = frozenset({KIND_ENV, KIND_ANY}) if is_env_file(path.name) else kinds_for(self.ext)
         self.is_test = bool(TEST_PATH_RE.search(self.rel))
         self.project = project
         self._line_starts = [0] + [m.end() for m in re.finditer("\n", text)]
@@ -96,7 +99,8 @@ class FileContext:
     def _find_comment_lines(self) -> set[int]:
         """Return 1-based numbers of lines that are entirely comments."""
         result: set[int] = set()
-        is_python = KIND_PYTHON in self.kinds or self.path.suffix.lower() in _HASH_LANGS
+        is_python = (KIND_PYTHON in self.kinds or KIND_ENV in self.kinds
+                     or self.path.suffix.lower() in _HASH_LANGS)
         in_block = False
         in_html = False
         for n, line in enumerate(self.lines, 1):

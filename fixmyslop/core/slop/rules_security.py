@@ -8,9 +8,10 @@ from typing import Iterable
 
 from fixmyslop.core.slop.rule import (
     FileContext, Hit, rule, line_rule,
-    KIND_CODE, KIND_SCRIPT, KIND_MARKUP, KIND_ANY,
+    KIND_CODE, KIND_SCRIPT, KIND_MARKUP, KIND_ANY, KIND_ENV,
 )
-from fixmyslop.macros import SEVERITY_CRITICAL, SEVERITY_HIGH, SEVERITY_MEDIUM, CATEGORY_SECURITY
+from fixmyslop.macros import SEVERITY_CRITICAL, SEVERITY_HIGH, SEVERITY_MEDIUM, CATEGORY_SECURITY, is_env_template
+from fixmyslop.utils.git_utils import is_ignored
 
 _LEAKED_KEY = re.compile(
     r"(?<![A-Za-z0-9_-])(?:sk-(?:proj-|ant-(?:api\d+-)?)?[A-Za-z0-9_\-]{20,}|AKIA[0-9A-Z]{16}"
@@ -94,9 +95,42 @@ def check_hardcoded_credential(ctx: FileContext) -> Iterable[Hit]:
             break
 
 
+_ENV_ASSIGN = re.compile(r"^\s*(?:export\s+)?([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$")
+_ENV_SECRET_NAME = re.compile(
+    r"key|secret|token|passw|pwd|credential|private|service_role|dsn|webhook", re.IGNORECASE)
+_URL_WITH_PASSWORD = re.compile(r"://[^:/@\s]+:[^@\s]+@(?!localhost|127\.0\.0\.1|0\.0\.0\.0|db\b|postgres\b)")
+
+
+@rule(
+    "sec/env-secret", "Real secrets in an env file git will commit", SEVERITY_HIGH, CATEGORY_SECURITY, (KIND_ENV,),
+    why="This .env file holds real keys and git doesn't ignore it, so it's already committed or the next "
+        "`git add .` will commit it. AI-built projects often ship without a .gitignore entry for .env.",
+    fix="Add `.env*` and `!.env.example` to .gitignore, run `git rm --cached <file>`, keep placeholder "
+        "values in .env.example, and rotate every key that was ever pushed.",
+)
+def check_env_secret(ctx: FileContext) -> Iterable[Hit]:
+    """One finding per env file: real-looking secret values in a file git doesn't ignore."""
+    if is_env_template(ctx.path.name) or is_ignored(ctx.path):
+        return
+    secrets = []
+    for n, line in enumerate(ctx.lines, 1):
+        match = _ENV_ASSIGN.match(line)
+        if not match or ctx.is_comment(n):
+            continue
+        name, value = match.group(1), match.group(2).strip("\"'")
+        if len(value) < 8 or _PLACEHOLDER_VALUE.search(value):
+            continue
+        if _ENV_SECRET_NAME.search(name) or _URL_WITH_PASSWORD.search(value):
+            secrets.append((n, name))
+    if secrets:
+        n, name = secrets[0]
+        names = ", ".join(s[1] for s in secrets[:4]) + (" ..." if len(secrets) > 4 else "")
+        yield Hit(n, f"{name}=***", f"{len(secrets)} secret value(s): {names}")
+
+
 line_rule(
     "sec/public-env-secret", "Secret in a public env var", SEVERITY_HIGH, CATEGORY_SECURITY,
-    (KIND_CODE, KIND_MARKUP),
+    (KIND_CODE, KIND_MARKUP, KIND_ENV),
     why="NEXT_PUBLIC_ / VITE_ / REACT_APP_ / EXPO_PUBLIC_ variables are inlined into the browser "
         "bundle. Anyone can read a secret, service-role key or LLM API key placed there.",
     fix="Move the call that needs this secret to a server route / edge function and keep the variable "

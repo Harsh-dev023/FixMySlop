@@ -13,6 +13,12 @@ TypeScript CLI. It found 29 false positives, all fixed:
   stands in for code between real lines.
 - `slop/placeholder-impl` no longer treats a plain `TODO: implement X` as AI hedging.
 
+**Env files**
+- `.env`, `.env.local`, `.env.production`... are now scanned. New `sec/env-secret`: real secret values in an env
+  file git doesn't ignore (already committed, or the next `git add .` will commit it). A gitignored `.env` and
+  `.env.example` placeholders stay quiet; local dev URLs (`localhost`) don't count.
+- `sec/public-env-secret` and `sec/leaked-key` also run on env files (`NEXT_PUBLIC_OPENAI_API_KEY=...`).
+
 **Languages**
 - Now scanned: Scala, Dart, Groovy, Kotlin scripts (`.kts`) and C/C++ headers. Some rules already mentioned
   these languages, but their files were never picked up.

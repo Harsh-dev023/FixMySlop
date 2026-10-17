@@ -534,3 +534,34 @@ def test_more_languages_are_scanned(tmp_path):
     assert "slop/empty-catch" in scan(tmp_path / "dart", "lib/load.dart", dart)
     groovy = "def load() {\n  try { run() } catch (Exception e) { e.printStackTrace() }\n}\n"
     assert "slop/print-stacktrace" in scan(tmp_path / "groovy", "src/Load.groovy", groovy)
+
+
+ENV = ("# Supabase\n"
+       "SUPABASE_URL=https://abcd.supabase.co\n"
+       "SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.c2VydmljZV9yb2xl\n"
+       "DATABASE_URL=postgres://admin:hunter2pass@db.example-prod.io:5432/app\n"
+       "PORT=3000\n")
+
+
+def test_env_secret_in_a_file_git_will_commit(tmp_path):
+    import subprocess
+    subprocess.run(["git", "init", "-q", str(tmp_path)], check=True)
+    assert "sec/env-secret" in scan(tmp_path, ".env", ENV)
+    # ignored by git: the normal, safe setup
+    (tmp_path / ".gitignore").write_text(".env*\n!.env.example\n", encoding="utf-8")
+    assert "sec/env-secret" not in scan(tmp_path, ".env", ENV)
+    # templates hold placeholders and are meant to be committed
+    template = "OPENAI_API_KEY=your-openai-key\nDATABASE_URL=postgres://user:pass@localhost:5432/app\n"
+    assert "sec/env-secret" not in scan(tmp_path, ".env.example", template)
+    assert "sec/env-secret" not in scan(tmp_path / "local", ".env",
+                                        "DATABASE_URL=postgres://postgres:postgres@localhost:5432/dev\n")
+
+
+def test_env_files_are_scanned_and_public_secrets_flagged(tmp_path):
+    from fixmyslop.core.scanner import Scanner
+    found = scan(tmp_path, ".env.local", "NEXT_PUBLIC_OPENAI_API_KEY=sk-proj-abc\nNEXT_PUBLIC_SITE=https://x.dev\n")  # fixmyslop-ignore[sec/public-env-secret]: test fixture
+    assert "sec/public-env-secret" in found
+    names = {p.name for p in Scanner(str(tmp_path)).files()}
+    assert ".env.local" in names
+    (tmp_path / "env.ts").write_text("export const env = {}\n", encoding="utf-8")
+    assert "slop/elided-code" not in scan(tmp_path, "env.ts", "export const env = {}\n")
