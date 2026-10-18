@@ -3,6 +3,12 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); while in 0.x, minor versions may
 include breaking changes.
 
+## 0.6.7
+
+- FixMySlop no longer crashes where the home directory is read-only (serverless functions, read-only containers,
+  locked-down CI). The debug log file is skipped when it can't be created. Found deploying the website to Vercel.
+- Website: Vercel now detects both Python functions (each `api/*.py` declares `class handler`).
+
 ## 0.6.6
 
 - **Website** ([site/](site/)): paste a public GitHub repo, get the report, download it as PDF, Markdown, JSON,
