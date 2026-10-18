@@ -114,3 +114,10 @@ def test_badge(fake_github):
     status, headers, body = fms_site.badge_response({"repo": "acme/demo"})
     assert status == 200 and headers["Content-Type"] == "image/svg+xml"
     assert b"slop" in body and b"grade " in body
+
+
+def test_vercel_can_detect_every_function():
+    """Vercel only treats api/*.py as functions when the file has a literal `class handler(...)`."""
+    api = Path(__file__).resolve().parent.parent / "site" / "api"
+    for path in api.glob("*.py"):
+        assert "class handler(BaseHTTPRequestHandler)" in path.read_text(encoding="utf-8"), path.name

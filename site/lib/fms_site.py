@@ -289,22 +289,22 @@ a{{color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 12
     return error.status, headers, page.encode("utf-8")
 
 
-def make_handler(view):
-    """A Vercel Python function class for a view returning (status, headers, body)."""
+def serve(request: BaseHTTPRequestHandler, view) -> None:
+    """Answer a GET with a view returning (status, headers, body). Used by the Vercel functions in api/.
+
+    Vercel only recognises a file as a function when it contains a literal `class handler(...)`, so each
+    api/*.py keeps that class and delegates here.
+    """
     from urllib.parse import parse_qs, urlparse
 
-    class Handler(BaseHTTPRequestHandler):
-        def do_GET(self):
-            query = {k: v[0] for k, v in parse_qs(urlparse(self.path).query).items()}
-            status, headers, body = view(query)
-            self.send_response(status)
-            for key, value in headers.items():
-                self.send_header(key, value)
-            self.send_header("Content-Length", str(len(body)))
-            self.end_headers()
-            self.wfile.write(body)
-
-    return Handler
+    query = {k: v[0] for k, v in parse_qs(urlparse(request.path).query).items()}
+    status, headers, body = view(query)
+    request.send_response(status)
+    for key, value in headers.items():
+        request.send_header(key, value)
+    request.send_header("Content-Length", str(len(body)))
+    request.end_headers()
+    request.wfile.write(body)
 
 
 # ─── badge ──────────────────────────────────────────────────────────────────
