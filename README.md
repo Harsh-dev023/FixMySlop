@@ -76,6 +76,12 @@ Supported files: Python, JS/TS, JSX/TSX, Vue, Svelte, Astro, HTML, CSS/SCSS/Less
 Groovy, C#, Swift, PHP, Scala, Dart, Rust, C/C++ and Ruby (language-specific and general checks). Details:
 [Supported languages](#supported-languages).
 
+## On the web
+
+The [site/](site/) folder is a small website for FixMySlop: paste a public GitHub repository and get the report,
+with PDF and Markdown downloads and a README badge (`/badge/<owner>/<repo>`). It downloads the code, reads it,
+and deletes it; nothing is executed. It deploys to Vercel as-is: see [site/README.md](site/README.md).
+
 ## The app
 
 `fixmyslop ui` opens FixMySlop in your browser. It runs only on your machine (127.0.0.1, per-session token,
@@ -251,7 +257,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with: { fetch-depth: 0 }
-      - uses: MrSpideyNihal/FixMySlop@v0.6.5
+      - uses: MrSpideyNihal/FixMySlop@v0.6.6
         with: { fail-on: high, changed-only: true }
 ```
 
@@ -260,7 +266,7 @@ Findings show up as inline PR annotations (SARIF). Also on the [GitHub Marketpla
 ```yaml
 repos:
   - repo: https://github.com/MrSpideyNihal/FixMySlop
-    rev: v0.6.5
+    rev: v0.6.6
     hooks: [{ id: fixmyslop }]
 ```
 

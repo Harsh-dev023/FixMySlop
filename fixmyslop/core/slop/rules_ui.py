@@ -163,7 +163,7 @@ line_rule(
         "copied from AI templates.",
     fix="Delete the decorative blob elements. If the section needs depth, use spacing, a border, or a "
         "single subtle background tint.",
-    pattern=r"(?=[^\n]*\bblur-(?:2xl|3xl|\[\d{2,}px\]))(?=[^\n]*\b(?:rounded-full|absolute)\b)"
+    pattern=r"^(?=[^\n]*\bblur-(?:2xl|3xl|\[\d{2,}px\]))(?=[^\n]*\b(?:rounded-full|absolute)\b)"
             r"|filter:\s*blur\(\s*[4-9]\d+px",
     skip_tests=True,
 )
@@ -186,7 +186,7 @@ line_rule(
     pattern=r"\banimate-(?:bounce|ping)\b"
             r"|\banimation\s*:[^;]*\b(?:pulse|glow|breathe|float|shimmer|blink)\b[^;]*\binfinite\b"
             r"|\banimation\s*:[^;]*\binfinite\b[^;]*\b(?:pulse|glow|breathe|float|shimmer|blink)\b"
-            r"|(?=[^\n]*\banimate-pulse\b)(?=[^\n]*\brounded-full\b)(?=[^\n]*\b(?:h|size)-(?:1|1\.5|2)\b)",
+            r"|^(?=[^\n]*\banimate-pulse\b)(?=[^\n]*\brounded-full\b)(?=[^\n]*\b(?:h|size)-(?:1|1\.5|2)\b)",
     skip_tests=True,
 )
 
@@ -429,7 +429,7 @@ ARBITRARY_SIZE = re.compile(
 
 # ─── 2025–26 AI look: editorial dark-mode templates ─────────────────────────
 
-_TW_EYEBROW = re.compile(r"(?=[^\n]*\buppercase\b)(?=[^\n]*\btracking-(?:widest|wider|\[[0-9.]+(?:em|px|rem)\]))")
+_TW_EYEBROW = re.compile(r"^(?=[^\n]*\buppercase\b)(?=[^\n]*\btracking-(?:widest|wider|\[[0-9.]+(?:em|px|rem)\]))")
 
 
 @rule(
