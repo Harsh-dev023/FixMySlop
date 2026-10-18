@@ -4,12 +4,15 @@
 [![npm](https://img.shields.io/npm/v/fixmyslop)](https://www.npmjs.com/package/fixmyslop)
 [![CI](https://github.com/MrSpideyNihal/FixMySlop/actions/workflows/python-package.yml/badge.svg)](https://github.com/MrSpideyNihal/FixMySlop/actions/workflows/python-package.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![FixMySlop grade](https://fix-my-slop.vercel.app/badge/MrSpideyNihal/FixMySlop)](https://fix-my-slop.vercel.app/r/MrSpideyNihal/FixMySlop)
 
 **The slop linter for the AI-agent era.** FixMySlop catches the things AI coding agents get wrong — the
 purple-gradient landing page, the `// ... existing code ...` that silently deleted half a file, the npm
 package that doesn't exist, the OpenAI key in `NEXT_PUBLIC_` — in milliseconds, without an LLM. Then it
 hands a precise fix list to the agent you already use (Claude Code, Codex, Cursor, Gemini) and re-scans to
 prove it's fixed.
+
+**Try it without installing:** paste any public GitHub repo at **[fix-my-slop.vercel.app](https://fix-my-slop.vercel.app)**.
 
 ![fixmyslop scan output: 31 issues across UI slop, accessibility, code slop, security and dependencies, slop score 100, grade F](screenshots/cli.svg)
 
@@ -78,9 +81,10 @@ Groovy, C#, Swift, PHP, Scala, Dart, Rust, C/C++ and Ruby (language-specific and
 
 ## On the web
 
-The [site/](site/) folder is a small website for FixMySlop: paste a public GitHub repository and get the report,
+**[fix-my-slop.vercel.app](https://fix-my-slop.vercel.app)**: paste a public GitHub repository and get the report,
 with PDF and Markdown downloads and a README badge (`/badge/<owner>/<repo>`). It downloads the code, reads it,
-and deletes it; nothing is executed. It deploys to Vercel as-is: see [site/README.md](site/README.md).
+and deletes it; nothing is executed. The source is in [site/](site/) and deploys to Vercel as-is: see
+[site/README.md](site/README.md).
 
 ## The app
 
