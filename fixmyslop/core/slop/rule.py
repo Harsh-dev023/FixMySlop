@@ -228,6 +228,14 @@ class FileContext:
         """Convert a character offset into a 1-based line number."""
         return bisect.bisect_right(self._line_starts, offset)
 
+    def joined(self, lines: list[str]) -> str:
+        """`lines` joined with plain newlines (no \\r), cached per list, for whole-file prefilter searches."""
+        cache = self.__dict__.setdefault("_joined", {})
+        key = id(lines)
+        if key not in cache:
+            cache[key] = "\n".join(lines)
+        return cache[key]
+
     def line_text(self, line_no: int) -> str:
         """Return the raw text of a 1-based line ('' when out of range)."""
         if 1 <= line_no <= len(self.lines):
@@ -292,11 +300,17 @@ def line_rule(id: str, title: str, severity: str, category: str, kinds: Iterable
     unless_inside: a regex for spans (e.g. placeholder="...") where a match doesn't count.
     """
     regex = re.compile(pattern, flags)
+    # One search over the whole file first: most rules match nothing in most files, and skipping them
+    # is most of the scan time. MULTILINE keeps ^/$ per line, so any per-line match is also found here.
+    prefilter = re.compile(pattern, flags | re.MULTILINE)
     shield = re.compile(unless_inside, re.IGNORECASE) if unless_inside else None
     reads_markup = category in (CATEGORY_UI_SLOP, CATEGORY_A11Y)   # class strings live in templates too
 
     def check(ctx: FileContext) -> Iterable[Hit]:
-        for n, line in enumerate(ctx.lines if reads_markup else ctx.code_lines, 1):
+        lines = ctx.lines if reads_markup else ctx.code_lines
+        if not prefilter.search(ctx.joined(lines)):
+            return
+        for n, line in enumerate(lines, 1):
             is_comment = ctx.is_comment(n)
             if scope == "code" and is_comment:
                 continue

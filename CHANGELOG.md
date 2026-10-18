@@ -3,6 +3,14 @@
 All notable changes. Versions follow [semantic versioning](https://semver.org/); while in 0.x, minor versions may
 include breaking changes.
 
+## 0.6.6
+
+- **Website** ([site/](site/)): paste a public GitHub repo, get the report, download it as PDF, Markdown, JSON,
+  CSV or SARIF, and add a grade badge to your README. Deploys to Vercel; nothing from the scanned repo is executed.
+- **Scans are about 2x faster on Tailwind-heavy code.** Three UI rules re-scanned each line from every character
+  position; they now scan each line once. Line rules also skip files they can't match. Findings are identical
+  (checked on the benchmark and 64 AI-built sites).
+
 ## 0.6.5
 
 **Reports you can hand to someone**
