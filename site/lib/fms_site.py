@@ -10,6 +10,7 @@ Every route returns (status, headers, body) so the same code runs as a Vercel fu
 import html
 import io
 import json
+import os
 from http.server import BaseHTTPRequestHandler
 import re
 import shutil
@@ -21,7 +22,11 @@ import urllib.request
 from pathlib import Path, PurePosixPath
 from urllib.parse import quote
 
-from fixmyslop import __version__ as ENGINE_VERSION
+# Serverless functions can only write to /tmp; fixmyslop < 0.6.7 creates ~/.fixmyslop on first use.
+if not os.access(Path.home(), os.W_OK):
+    os.environ["HOME"] = tempfile.gettempdir()
+
+from fixmyslop import __version__ as ENGINE_VERSION  # noqa: E402
 
 MAX_DOWNLOAD = 60 * 1024 * 1024        # compressed tarball
 MAX_EXTRACTED = 250 * 1024 * 1024      # total bytes written
