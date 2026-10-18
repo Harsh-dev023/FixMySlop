@@ -89,6 +89,7 @@ def test_report_page(fake_github):
     assert "ui/ai-gradient" in page and "docs/missing-script" in page
     assert "acme/demo" in page and COMMIT[:7] in page              # the site bar
     assert "fms-" not in page                                      # no temp paths leak into the report
+    assert "/_vercel/insights/script.js" in page                   # cookieless page-view analytics
 
 
 @pytest.mark.parametrize("fmt, marker", [("pdf", b"%PDF-1.4"), ("md", b"# FixMySlop report"),
