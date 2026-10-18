@@ -45,8 +45,9 @@ SITE_HEADERS = {
     "Referrer-Policy": "no-referrer",
     "X-Frame-Options": "DENY",
 }
-REPORT_CSP = ("default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data:; "
-              "base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
+REPORT_CSP = ("default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; "
+              "img-src 'self' data:; connect-src 'self'; base-uri 'none'; form-action 'none'; frame-ancestors 'none'")
+ANALYTICS = '<script src="/_vercel/insights/script.js" defer></script>'   # Vercel Web Analytics: cookieless
 
 
 class ScanError(Exception):
@@ -229,7 +230,7 @@ def _html_report(scan: Scan):
     from fixmyslop.core.html_report import render_html
 
     page = render_html(scan.report, scan.engine.relpath)
-    page = page.replace("</head>", _BAR_STYLE + "</head>", 1).replace("<body>", "<body>" + _bar(scan), 1)
+    page = page.replace("</head>", _BAR_STYLE + ANALYTICS + "</head>", 1).replace("<body>", "<body>" + _bar(scan), 1)
     return 200, {**SITE_HEADERS, "Content-Type": "text/html; charset=utf-8", "Cache-Control": CACHE,
                  "Content-Security-Policy": REPORT_CSP, "X-Robots-Tag": "noindex"}, page.encode("utf-8")
 
